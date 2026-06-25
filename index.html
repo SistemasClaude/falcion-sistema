@@ -1,0 +1,1682 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>FalciON — Sistema de Projetos</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<link href='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.css' rel='stylesheet'/>
+<script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js'></script>
+<script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/locales/pt-br.global.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --navy:#1a2744;--navy2:#0f1a33;--navy3:#243057;
+  --gold:#c9a84c;--gold2:#e8c96a;
+  --text:#e8eaf0;--text2:#8a9abb;--text3:#4a5880;
+  --green:#16a34a;--red:#dc2626;--blue:#3b82f6;--orange:#f59e0b;
+  --surface:#1e2d52;--surface2:#253662;--border:#2d3f6e;
+}
+body{font-family:'Segoe UI',Arial,sans-serif;background:var(--navy2);color:var(--text);min-height:100vh;display:flex}
+
+/* ── SCROLLBAR ── */
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-track{background:var(--navy2)}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+
+/* ── LOGIN ── */
+#loginPage{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;width:100%;background:var(--navy2);gap:32px;padding:24px}
+.login-logo{font-size:2.4rem;font-weight:900;color:var(--gold);letter-spacing:2px}
+.login-logo span{color:var(--text2);font-weight:300}
+.login-box{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:40px 32px;width:100%;max-width:440px;text-align:center}
+.login-box h2{font-size:1.1rem;color:var(--text2);margin-bottom:24px;font-weight:400}
+.profile-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.profile-btn{background:var(--surface2);border:2px solid var(--border);border-radius:12px;padding:18px 12px;cursor:pointer;transition:all .2s;display:flex;flex-direction:column;align-items:center;gap:8px}
+.profile-btn:hover{border-color:var(--gold);background:var(--navy3)}
+.profile-avatar{width:44px;height:44px;border-radius:50%;background:var(--gold);color:var(--navy2);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:1.1rem}
+.profile-name{font-size:.85rem;color:var(--text);font-weight:600}
+.profile-email{font-size:.72rem;color:var(--text2)}
+
+/* ── LAYOUT ── */
+#app{display:flex;width:100%;min-height:100vh;display:none}
+
+/* ── SIDEBAR ── */
+#sidebar{width:260px;min-width:260px;background:var(--navy);border-right:1px solid var(--border);display:flex;flex-direction:column;height:100vh;position:sticky;top:0;overflow:hidden}
+.sidebar-logo{padding:20px 20px 16px;border-bottom:1px solid var(--border)}
+.logo-text{font-size:1.6rem;font-weight:900;color:var(--gold);letter-spacing:1px}
+.logo-sub{font-size:.7rem;color:var(--text2);letter-spacing:2px;text-transform:uppercase;margin-top:2px}
+.sidebar-menu{padding:12px 0}
+.menu-label{font-size:.65rem;color:var(--text3);letter-spacing:2px;text-transform:uppercase;padding:12px 20px 4px}
+.menu-item{display:flex;align-items:center;gap:10px;padding:10px 20px;cursor:pointer;font-size:.88rem;color:var(--text2);transition:all .2s;border-left:3px solid transparent}
+.menu-item:hover{background:var(--surface);color:var(--text)}
+.menu-item.active{background:var(--surface);color:var(--gold);border-left-color:var(--gold)}
+.menu-icon{font-size:1rem;width:20px;text-align:center}
+.sidebar-clients{flex:1;overflow-y:auto;padding:0 0 12px}
+.client-menu-item{padding:8px 20px 8px 32px;font-size:.8rem;color:var(--text3);cursor:pointer;transition:all .15s;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.client-menu-item:hover{color:var(--text2);background:rgba(255,255,255,.03)}
+.sidebar-user{border-top:1px solid var(--border);padding:14px 20px;display:flex;align-items:center;gap:10px}
+.user-avatar{width:36px;height:36px;border-radius:50%;background:var(--gold);color:var(--navy2);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:.9rem;flex-shrink:0}
+.user-info{flex:1;min-width:0}
+.user-name{font-size:.82rem;color:var(--text);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.user-role{font-size:.7rem;color:var(--text2)}
+.logout-btn{background:none;border:none;color:var(--text3);cursor:pointer;font-size:.8rem;padding:4px 8px;border-radius:6px;transition:color .2s}
+.logout-btn:hover{color:var(--red)}
+
+/* ── MAIN ── */
+#main{flex:1;overflow-y:auto;display:flex;flex-direction:column}
+.topbar{background:var(--navy);border-bottom:1px solid var(--border);padding:14px 28px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:10}
+.page-title{font-size:1.05rem;font-weight:700;color:var(--text)}
+.topbar-right{display:flex;align-items:center;gap:16px}
+.date-badge{font-size:.8rem;color:var(--text2);background:var(--surface);padding:4px 12px;border-radius:20px;border:1px solid var(--border)}
+.notif-btn{position:relative;background:var(--surface);border:1px solid var(--border);border-radius:8px;width:36px;height:36px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--text2);transition:all .2s}
+.notif-btn:hover{border-color:var(--gold);color:var(--gold)}
+.notif-count{position:absolute;top:-6px;right:-6px;background:var(--red);color:#fff;font-size:.65rem;font-weight:700;border-radius:10px;min-width:18px;height:18px;display:flex;align-items:center;justify-content:center;padding:0 4px}
+.page-content{padding:28px;flex:1}
+
+/* ── CARDS ── */
+.stat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:28px}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:22px;display:flex;flex-direction:column;gap:6px}
+.stat-label{font-size:.72rem;color:var(--text2);letter-spacing:1px;text-transform:uppercase}
+.stat-value{font-size:2.2rem;font-weight:800;color:var(--gold);line-height:1}
+.stat-sub{font-size:.75rem;color:var(--text3)}
+.stat-card.blue .stat-value{color:var(--blue)}
+.stat-card.green .stat-value{color:var(--green)}
+
+/* ── INFO BOX ── */
+.info-box{background:rgba(201,168,76,.08);border:1px solid rgba(201,168,76,.2);border-radius:10px;padding:10px 16px;font-size:.8rem;color:var(--gold);margin-bottom:20px}
+
+/* ── SECTION HEADER ── */
+.section-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+.section-title{font-size:.85rem;font-weight:700;color:var(--text2);letter-spacing:1px;text-transform:uppercase}
+
+/* ── CLIENT CARDS (dashboard) ── */
+.client-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px}
+.client-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:18px;cursor:pointer;transition:all .2s}
+.client-card:hover{border-color:var(--gold);transform:translateY(-1px)}
+.client-card-name{font-size:.95rem;font-weight:700;color:var(--text);margin-bottom:12px}
+.client-card-row{display:flex;justify-content:space-between;align-items:center;font-size:.78rem;padding:4px 0;border-bottom:1px solid rgba(255,255,255,.04)}
+.client-card-row:last-child{border-bottom:none}
+.client-card-label{color:var(--text2)}
+.client-card-val{color:var(--text);font-weight:600}
+.badge{display:inline-flex;align-items:center;font-size:.7rem;font-weight:700;padding:2px 8px;border-radius:10px;letter-spacing:.5px}
+.badge-green{background:rgba(22,163,74,.15);color:#4ade80}
+.badge-red{background:rgba(220,38,38,.15);color:#f87171}
+.badge-orange{background:rgba(245,158,11,.15);color:#fbbf24}
+.badge-blue{background:rgba(59,130,246,.15);color:#60a5fa}
+.saldo-neg{color:var(--red)!important}
+
+/* ── CLIENTES PAGE ── */
+.filter-bar{display:flex;gap:10px;margin-bottom:20px;flex-wrap:wrap;align-items:center}
+.filter-input{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:8px 14px;font-size:.85rem;color:var(--text);outline:none;min-width:200px}
+.filter-input:focus{border-color:var(--gold)}
+.filter-select{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:8px 12px;font-size:.82rem;color:var(--text);outline:none;cursor:pointer}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:8px;border:none;font-size:.85rem;font-weight:600;cursor:pointer;transition:all .2s}
+.btn-primary{background:var(--gold);color:var(--navy2)}
+.btn-primary:hover{background:var(--gold2)}
+.btn-ghost{background:var(--surface2);color:var(--text2);border:1px solid var(--border)}
+.btn-ghost:hover{border-color:var(--gold);color:var(--text)}
+.btn-danger{background:rgba(220,38,38,.15);color:var(--red);border:1px solid rgba(220,38,38,.3)}
+.btn-danger:hover{background:rgba(220,38,38,.25)}
+.btn-sm{padding:5px 10px;font-size:.78rem}
+
+/* ── TABLE ── */
+.table-wrap{background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden}
+table{width:100%;border-collapse:collapse}
+th{background:var(--surface2);padding:12px 16px;text-align:left;font-size:.72rem;color:var(--text2);text-transform:uppercase;letter-spacing:.8px;border-bottom:1px solid var(--border)}
+td{padding:12px 16px;font-size:.85rem;color:var(--text);border-bottom:1px solid rgba(255,255,255,.04)}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:rgba(255,255,255,.02)}
+.action-cell{display:flex;gap:6px}
+
+/* ── DETAIL PAGE ── */
+.back-btn{display:inline-flex;align-items:center;gap:6px;color:var(--text2);font-size:.85rem;cursor:pointer;margin-bottom:20px;padding:6px 0;transition:color .2s}
+.back-btn:hover{color:var(--gold)}
+.detail-header{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:24px;margin-bottom:20px}
+.detail-name{font-size:1.4rem;font-weight:800;color:var(--text);margin-bottom:12px}
+.detail-meta{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.meta-item{display:flex;flex-direction:column;gap:4px}
+.meta-label{font-size:.7rem;color:var(--text2);text-transform:uppercase;letter-spacing:.8px}
+.meta-val{font-size:1rem;font-weight:700;color:var(--gold)}
+
+/* ── TABS ── */
+.tabs{display:flex;gap:2px;background:var(--surface2);border-radius:10px;padding:4px;margin-bottom:20px;flex-wrap:wrap}
+.tab{padding:8px 16px;border-radius:8px;font-size:.83rem;font-weight:600;cursor:pointer;color:var(--text2);transition:all .2s;border:none;background:none}
+.tab.active{background:var(--surface);color:var(--gold)}
+.tab:hover:not(.active){color:var(--text)}
+
+/* ── MODAL ── */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:100;display:flex;align-items:center;justify-content:center;padding:16px;display:none}
+.modal-overlay.open{display:flex}
+.modal{background:var(--navy);border:1px solid var(--border);border-radius:16px;padding:28px;width:100%;max-width:520px;max-height:90vh;overflow-y:auto}
+.modal-title{font-size:1.05rem;font-weight:700;color:var(--text);margin-bottom:20px}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.form-group{display:flex;flex-direction:column;gap:6px;margin-bottom:14px}
+.form-label{font-size:.78rem;color:var(--text2);font-weight:600}
+.form-input{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:10px 14px;font-size:.88rem;color:var(--text);outline:none;width:100%;transition:border-color .2s}
+.form-input:focus{border-color:var(--gold)}
+.form-input[type=number]{-moz-appearance:textfield}
+textarea.form-input{resize:vertical;min-height:80px}
+.form-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:8px}
+
+/* ── EMPTY STATE ── */
+.empty{text-align:center;padding:48px 24px;color:var(--text3)}
+.empty-icon{font-size:2.5rem;margin-bottom:12px}
+.empty-text{font-size:.88rem}
+
+/* ── AGENDA ── */
+.agenda-filters{display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;align-items:center}
+.toggle-btn{padding:6px 14px;border-radius:20px;font-size:.78rem;font-weight:600;cursor:pointer;border:1px solid var(--border);background:var(--surface2);color:var(--text2);transition:all .2s}
+.toggle-btn.on{background:rgba(201,168,76,.15);border-color:var(--gold);color:var(--gold)}
+#calendar .fc{background:transparent}
+#calendar .fc-toolbar-title{color:var(--text);font-size:1rem}
+#calendar .fc-button{background:var(--surface2);border:1px solid var(--border);color:var(--text2);font-size:.8rem;padding:4px 10px}
+#calendar .fc-button:hover{background:var(--surface);color:var(--text)}
+#calendar .fc-button-active{background:var(--gold)!important;color:var(--navy2)!important;border-color:var(--gold)!important}
+#calendar .fc-col-header-cell{background:var(--surface2);color:var(--text2);font-size:.78rem}
+#calendar .fc-daygrid-day{background:var(--surface)}
+#calendar .fc-daygrid-day:hover{background:var(--surface2)}
+#calendar .fc-day-today{background:rgba(201,168,76,.08)!important}
+#calendar .fc-daygrid-day-number{color:var(--text2);font-size:.82rem}
+#calendar .fc-event{font-size:.75rem;cursor:pointer;border-radius:4px!important}
+#calendar .fc-scrollgrid{border-color:var(--border)}
+#calendar .fc-scrollgrid td,.fc-scrollgrid th{border-color:var(--border)}
+
+/* ── RESPONSIVE ── */
+@media(max-width:900px){
+  #sidebar{display:none}
+  .stat-grid{grid-template-columns:1fr 1fr}
+  .detail-meta{grid-template-columns:1fr 1fr}
+}
+@media(max-width:600px){
+  .stat-grid{grid-template-columns:1fr}
+  .form-row{grid-template-columns:1fr}
+}
+
+/* ── GOOGLE CALENDAR ── */
+.gcal-section{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px;margin-bottom:20px}
+.gcal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.gcal-title{font-size:.85rem;font-weight:700;color:var(--text);display:flex;align-items:center;gap:8px}
+.gcal-event{display:flex;align-items:flex-start;gap:10px;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.05)}
+.gcal-event:last-child{border-bottom:none}
+.gcal-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;margin-top:4px}
+.gcal-info{flex:1}
+.gcal-evname{font-size:.85rem;color:var(--text);font-weight:500}
+.gcal-evtime{font-size:.75rem;color:var(--text2)}
+.gcal-connect-btn{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 16px;color:var(--text2);font-size:.82rem;cursor:pointer;display:flex;align-items:center;gap:8px;transition:all .2s}
+.gcal-connect-btn:hover{border-color:var(--gold);color:var(--text)}
+.gcal-connect-btn img{width:16px;height:16px}
+</style>
+</head>
+<body>
+
+<!-- ══ LOGIN ══ -->
+<div id="loginPage">
+  <div class="login-logo">FalciON <span>Sistema de Projetos</span></div>
+  <div class="login-box">
+    <h2>Selecione seu perfil para continuar</h2>
+    <div class="profile-grid" id="profileGrid">
+      <div style="text-align:center;padding:24px;color:var(--text2);font-size:.85rem;grid-column:1/-1">Carregando perfis...</div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ APP ══ -->
+<div id="app">
+  <!-- SIDEBAR -->
+  <aside id="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-text">FalciON</div>
+      <div class="logo-sub">Sistema de Projetos</div>
+    </div>
+    <nav class="sidebar-menu">
+      <div class="menu-label">Menu Principal</div>
+      <div class="menu-item active" onclick="navigate('dashboard')" id="nav-dashboard">
+        <span class="menu-icon">📊</span> Dashboard
+      </div>
+      <div class="menu-item" onclick="navigate('clientes')" id="nav-clientes">
+        <span class="menu-icon">👥</span> Clientes
+      </div>
+      <div class="menu-item" onclick="navigate('tarefas')" id="nav-tarefas">
+        <span class="menu-icon">✅</span> Tarefas
+      </div>
+      <div class="menu-item" onclick="navigate('agenda')" id="nav-agenda">
+        <span class="menu-icon">📅</span> Agenda
+      </div>
+    </nav>
+    <div class="sidebar-menu">
+      <div class="menu-label">Clientes Ativos</div>
+    </div>
+    <div class="sidebar-clients" id="sidebarClients"></div>
+    <div class="sidebar-user">
+      <div class="user-avatar" id="userAvatar">?</div>
+      <div class="user-info">
+        <div class="user-name" id="userName">—</div>
+        <div class="user-role">MEMBER</div>
+      </div>
+      <button class="logout-btn" onclick="logout()" title="Sair">✕</button>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <main id="main">
+    <header class="topbar">
+      <div class="page-title" id="pageTitle">Dashboard</div>
+      <div class="topbar-right">
+        <div class="date-badge" id="dateBadge"></div>
+        <div class="notif-btn" onclick="navigate('tarefas')">
+          🔔<span class="notif-count" id="notifCount">0</span>
+        </div>
+      </div>
+    </header>
+    <div class="page-content" id="pageContent"></div>
+  </main>
+</div>
+
+<!-- ══ MODALS ══ -->
+<div class="modal-overlay" id="modalOverlay" onclick="if(event.target===this)closeModal()">
+  <div class="modal" id="modalBox">
+    <div id="modalContent"></div>
+  </div>
+</div>
+
+<script>
+// ── SUPABASE ──
+const SUPABASE_URL = 'https://wbqocdokshpfeeacudsm.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_0iKa7irplUDEJ2oQtTHBuQ_WbHcmE9M';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+// ── STATE ──
+let state = {
+  currentUser: null,
+  projects: [],
+  tasks: [],
+  visits: [],
+  notes: [],
+  contacts: [],
+  occurrences: [],
+  profiles: [],
+  customEvents: [],
+  loading: false
+};
+let currentPage = 'dashboard';
+let selectedProjectId = null;
+let calendarInstance = null;
+
+// ── HELPERS ──
+function fmt(n) {
+  const h = Math.floor(Math.abs(n));
+  const m = Math.round((Math.abs(n) - h) * 60);
+  const s = (n < 0 ? '-' : '') + h.toString() + ':' + m.toString().padStart(2, '0');
+  return s;
+}
+
+function parseDuration(str) {
+  if (!str) return 0;
+  const [h, m] = str.split(':').map(Number);
+  return h + (m || 0) / 60;
+}
+
+function calcSaldo(project) {
+  if (!project) return 0;
+  const now = new Date();
+  const created = new Date(project.createdAt);
+  const createdYear = created.getUTCFullYear();
+  const createdMonth = created.getUTCMonth();
+  const nowYear = now.getFullYear();
+  const nowMonth = now.getMonth();
+  const monthsElapsed = Math.max(0, (nowYear - createdYear) * 12 + (nowMonth - createdMonth)) + 1;
+  const total = project.initialHours + monthsElapsed * project.monthlyQuotaHours;
+  const used = state.visits
+    .filter(v => v.projectId === project.id)
+    .reduce((acc, v) => acc + parseDuration(v.duration), 0);
+  return total - used;
+}
+
+function calcTotalSaldo() {
+  return state.projects
+    .filter(p => p.status === 'ATIVO')
+    .reduce((acc, p) => acc + calcSaldo(p), 0);
+}
+
+function pendingTasks() {
+  return state.tasks.filter(t => t.status !== 'completed').length;
+}
+
+function activeClients() {
+  return state.projects.filter(p => p.status === 'ATIVO').length;
+}
+
+function avatar(name) {
+  return (name || '?').charAt(0).toUpperCase();
+}
+
+function dateStr() {
+  return new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' });
+}
+
+function fmtDate(d) {
+  if (!d) return '—';
+  return new Date(d + 'T00:00:00').toLocaleDateString('pt-BR');
+}
+
+function statusBadge(s) {
+  const map = {
+    'ATIVO': 'badge-green', 'INATIVO': 'badge-red',
+    'PAUSADO': 'badge-orange', 'completed': 'badge-green',
+    'pending': 'badge-orange', 'overdue': 'badge-red'
+  };
+  const labels = { 'pending': 'Pendente', 'completed': 'Concluída', 'overdue': 'Atrasada' };
+  return `<span class="badge ${map[s] || 'badge-blue'}">${labels[s] || s}</span>`;
+}
+
+// ── SUPABASE API ──
+const api = {
+  async getProfiles() {
+    const { data, error } = await sb.from('profiles').select('*').order('name');
+    if (error) throw error;
+    return data || [];
+  },
+  async getProjects() {
+    const { data, error } = await sb.from('projects').select('*').order('name');
+    if (error) throw error;
+    return data || [];
+  },
+  async createProject(obj) {
+    const { data, error } = await sb.from('projects').insert(obj).select().single();
+    if (error) throw error;
+    return data;
+  },
+  async updateProject(id, obj) {
+    const { data, error } = await sb.from('projects').update(obj).eq('id', id).select().single();
+    if (error) throw error;
+    return data;
+  },
+  async deleteProject(id) {
+    const { error } = await sb.from('projects').delete().eq('id', id);
+    if (error) throw error;
+  },
+  async getTasks(projectId) {
+    let q = sb.from('tasks').select('*');
+    if (projectId) q = q.eq('project_id', projectId);
+    const { data, error } = await q.order('created_at', { ascending: false });
+    if (error) throw error;
+    return data || [];
+  },
+  async createTask(obj) {
+    const { data, error } = await sb.from('tasks').insert(obj).select().single();
+    if (error) throw error;
+    return data;
+  },
+  async updateTask(id, obj) {
+    const { data, error } = await sb.from('tasks').update(obj).eq('id', id).select().single();
+    if (error) throw error;
+    return data;
+  },
+  async deleteTask(id) {
+    const { error } = await sb.from('tasks').delete().eq('id', id);
+    if (error) throw error;
+  },
+  async getVisits(projectId) {
+    let q = sb.from('visits').select('*');
+    if (projectId) q = q.eq('project_id', projectId);
+    const { data, error } = await q.order('date', { ascending: false });
+    if (error) throw error;
+    return data || [];
+  },
+  async createVisit(obj) {
+    const { data, error } = await sb.from('visits').insert(obj).select().single();
+    if (error) throw error;
+    return data;
+  },
+  async updateVisit(id, obj) {
+    const { data, error } = await sb.from('visits').update(obj).eq('id', id).select().single();
+    if (error) throw error;
+    return data;
+  },
+  async deleteVisit(id) {
+    const { error } = await sb.from('visits').delete().eq('id', id);
+    if (error) throw error;
+  },
+  async getNotes(projectId) {
+    let q = sb.from('notes').select('*');
+    if (projectId) q = q.eq('project_id', projectId);
+    const { data, error } = await q.order('created_at', { ascending: false });
+    if (error) throw error;
+    return data || [];
+  },
+  async createNote(obj) {
+    const { data, error } = await sb.from('notes').insert(obj).select().single();
+    if (error) throw error;
+    return data;
+  },
+  async updateNote(id, obj) {
+    const { data, error } = await sb.from('notes').update(obj).eq('id', id).select().single();
+    if (error) throw error;
+    return data;
+  },
+  async deleteNote(id) {
+    const { error } = await sb.from('notes').delete().eq('id', id);
+    if (error) throw error;
+  },
+  async getContacts(projectId) {
+    let q = sb.from('contacts').select('*');
+    if (projectId) q = q.eq('project_id', projectId);
+    const { data, error } = await q.order('name');
+    if (error) throw error;
+    return data || [];
+  },
+  async createContact(obj) {
+    const { data, error } = await sb.from('contacts').insert(obj).select().single();
+    if (error) throw error;
+    return data;
+  },
+  async updateContact(id, obj) {
+    const { data, error } = await sb.from('contacts').update(obj).eq('id', id).select().single();
+    if (error) throw error;
+    return data;
+  },
+  async deleteContact(id) {
+    const { error } = await sb.from('contacts').delete().eq('id', id);
+    if (error) throw error;
+  },
+  async getOccurrences(projectId) {
+    let q = sb.from('occurrences').select('*');
+    if (projectId) q = q.eq('project_id', projectId);
+    const { data, error } = await q.order('date', { ascending: false });
+    if (error) throw error;
+    return data || [];
+  },
+  async createOccurrence(obj) {
+    const { data, error } = await sb.from('occurrences').insert(obj).select().single();
+    if (error) throw error;
+    return data;
+  },
+  async updateOccurrence(id, obj) {
+    const { data, error } = await sb.from('occurrences').update(obj).eq('id', id).select().single();
+    if (error) throw error;
+    return data;
+  },
+  async deleteOccurrence(id) {
+    const { error } = await sb.from('occurrences').delete().eq('id', id);
+    if (error) throw error;
+  }
+};
+
+// ── MAP RAW PROJECTS ──
+function mapProject(r) {
+  return {
+    id: r.id,
+    name: r.name,
+    imageUrl: r.image_url || null,
+    monthlyQuotaHours: Number(r.monthly_quota_hours) || 0,
+    initialHours: Number(r.initial_hours) || 0,
+    currentBalanceHours: Number(r.current_balance_hours) || 0,
+    lastQuotaResetDate: r.last_quota_reset_date || null,
+    firstPaymentDate: r.first_payment_date || null,
+    lastPaymentDate: r.last_payment_date || null,
+    status: r.status || 'ATIVO',
+    createdAt: r.created_at ? new Date(r.created_at).getTime() : Date.now()
+  };
+}
+
+function mapTask(r) {
+  return {
+    id: r.id,
+    projectId: r.project_id,
+    title: r.title,
+    description: r.description || '',
+    assignedTo: r.assigned_to || '',
+    deadline: r.deadline || '',
+    estimatedTime: r.estimated_time || '',
+    status: r.status || 'pending',
+    createdAt: r.created_at
+  };
+}
+
+function mapVisit(r) {
+  return {
+    id: r.id,
+    projectId: r.project_id,
+    taskId: r.task_id || null,
+    date: r.date,
+    duration: r.duration || '00:00',
+    description: r.description || '',
+    assignedTo: r.assigned_to || '',
+    createdAt: r.created_at
+  };
+}
+
+function mapNote(r) {
+  return { id: r.id, projectId: r.project_id, content: r.content || '', createdAt: r.created_at };
+}
+
+function mapContact(r) {
+  return { id: r.id, projectId: r.project_id, name: r.name || '', email: r.email || '', phone: r.phone || '', role: r.role || '', createdAt: r.created_at };
+}
+
+function mapOccurrence(r) {
+  return { id: r.id, projectId: r.project_id, date: r.date || '', description: r.description || '', title: r.title || '', createdAt: r.created_at };
+}
+
+// ── LOAD DATA ──
+async function loadAll() {
+  try {
+    const [projects, tasks, visits, notes, contacts, occurrences, profiles] = await Promise.all([
+      api.getProjects(),
+      api.getTasks(),
+      api.getVisits(),
+      api.getNotes(),
+      api.getContacts(),
+      api.getOccurrences(),
+      api.getProfiles()
+    ]);
+    state.projects = projects.map(mapProject);
+    state.tasks = tasks.map(mapTask);
+    state.visits = visits.map(mapVisit);
+    state.notes = notes.map(mapNote);
+    state.contacts = contacts.map(mapContact);
+    state.occurrences = occurrences.map(mapOccurrence);
+    state.profiles = profiles;
+    loadCustomEvents();
+  } catch (e) {
+    console.error('loadAll error', e);
+  }
+}
+
+function loadCustomEvents() {
+  try {
+    const raw = localStorage.getItem('falcion_custom_events_shared');
+    state.customEvents = raw ? JSON.parse(raw) : [];
+  } catch { state.customEvents = []; }
+}
+
+function saveCustomEvents() {
+  localStorage.setItem('falcion_custom_events_shared', JSON.stringify(state.customEvents));
+}
+
+// ── AUTH ──
+async function initLogin() {
+  const saved = localStorage.getItem('falcion_session');
+  if (saved) {
+    try {
+      state.currentUser = JSON.parse(saved);
+      await initApp();
+      return;
+    } catch {}
+  }
+  const profiles = await api.getProfiles().catch(() => []);
+  const grid = document.getElementById('profileGrid');
+  if (!profiles.length) {
+    grid.innerHTML = '<div style="color:var(--text2);text-align:center;padding:20px">Nenhum perfil encontrado.</div>';
+    return;
+  }
+  grid.innerHTML = profiles.map(p => `
+    <div class="profile-btn" onclick="selectProfile(${JSON.stringify(JSON.stringify(p))})">
+      <div class="profile-avatar">${avatar(p.name)}</div>
+      <div class="profile-name">${p.name}</div>
+      <div class="profile-email">${p.email || ''}</div>
+    </div>
+  `).join('');
+}
+
+function selectProfile(profileJson) {
+  const p = JSON.parse(profileJson);
+  state.currentUser = { id: p.id, name: p.name, email: p.email };
+  localStorage.setItem('falcion_session', JSON.stringify(state.currentUser));
+  initApp();
+}
+
+function logout() {
+  localStorage.removeItem('falcion_session');
+  state.currentUser = null;
+  document.getElementById('loginPage').style.display = 'flex';
+  document.getElementById('app').style.display = 'none';
+  initLogin();
+}
+
+async function initApp() {
+  document.getElementById('loginPage').style.display = 'none';
+  document.getElementById('app').style.display = 'flex';
+  // topbar
+  document.getElementById('userAvatar').textContent = avatar(state.currentUser.name);
+  document.getElementById('userName').textContent = state.currentUser.name;
+  document.getElementById('dateBadge').textContent = dateStr();
+  await loadAll();
+  renderSidebarClients();
+  document.getElementById('notifCount').textContent = pendingTasks();
+  navigate('dashboard');
+}
+
+// ── SIDEBAR CLIENTS ──
+function renderSidebarClients() {
+  const active = state.projects.filter(p => p.status === 'ATIVO');
+  document.getElementById('sidebarClients').innerHTML = active.map(p => `
+    <div class="client-menu-item" onclick="openProject('${p.id}')">${p.name}</div>
+  `).join('');
+}
+
+// ── NAVIGATION ──
+function navigate(page, projectId) {
+  currentPage = page;
+  document.querySelectorAll('.menu-item').forEach(el => el.classList.remove('active'));
+  const navEl = document.getElementById('nav-' + page);
+  if (navEl) navEl.classList.add('active');
+
+  const titles = { dashboard: 'Dashboard', clientes: 'Clientes', tarefas: 'Tarefas', agenda: 'Agenda', detail: 'Cliente' };
+  document.getElementById('pageTitle').textContent = titles[page] || page;
+
+  if (page === 'dashboard') renderDashboard();
+  else if (page === 'clientes') renderClientes();
+  else if (page === 'tarefas') renderTarefas();
+  else if (page === 'agenda') renderAgenda();
+  else if (page === 'detail') renderDetail(projectId);
+}
+
+function openProject(id) {
+  selectedProjectId = id;
+  navigate('detail', id);
+}
+
+// ── DASHBOARD ──
+function renderDashboard() {
+  const total = calcTotalSaldo();
+  const active = activeClients();
+  const pending = pendingTasks();
+  const activeProjects = state.projects.filter(p => p.status === 'ATIVO');
+
+  document.getElementById('pageContent').innerHTML = `
+    <div class="info-box">O saldo é calculado somando a cota mensal e horas iniciais de cada projeto, subtraindo o tempo total das visitas realizadas.</div>
+    <div class="stat-grid">
+      <div class="stat-card">
+        <div class="stat-label">Saldo Total</div>
+        <div class="stat-value ${total < 0 ? 'saldo-neg' : ''}">${fmt(total)}</div>
+        <div class="stat-sub">Soma de todos os projetos</div>
+      </div>
+      <div class="stat-card blue">
+        <div class="stat-label">Clientes Ativos</div>
+        <div class="stat-value">${active}</div>
+        <div class="stat-sub">Status ATIVO</div>
+      </div>
+      <div class="stat-card green">
+        <div class="stat-label">Tarefas Pendentes</div>
+        <div class="stat-value">${pending}</div>
+        <div class="stat-sub">Para concluir</div>
+      </div>
+    </div>
+    <div class="section-header">
+      <div class="section-title">Gestão de Clientes — Status: ATIVO</div>
+    </div>
+    <div class="client-grid">
+      ${activeProjects.map(p => {
+        const saldo = calcSaldo(p);
+        return `
+          <div class="client-card" onclick="openProject('${p.id}')">
+            <div class="client-card-name">${p.name}</div>
+            <div class="client-card-row"><span class="client-card-label">COTA MENSAL</span><span class="client-card-val">${p.monthlyQuotaHours} horas</span></div>
+            <div class="client-card-row"><span class="client-card-label">HORAS INICIAIS</span><span class="client-card-val ${p.initialHours < 0 ? 'saldo-neg' : ''}">${fmt(p.initialHours)} h</span></div>
+            <div class="client-card-row"><span class="client-card-label">SALDO REAL</span><span class="client-card-val ${saldo < 0 ? 'saldo-neg' : ''}">${fmt(saldo)} h</span></div>
+            <div class="client-card-row"><span class="client-card-label">STATUS</span><span>${statusBadge(p.status)}</span></div>
+          </div>
+        `;
+      }).join('')}
+    </div>
+  `;
+}
+
+// ── CLIENTES ──
+let clienteSearch = '';
+let clienteFilter = 'all';
+
+function renderClientes() {
+  let list = state.projects;
+  if (clienteSearch) list = list.filter(p => p.name.toLowerCase().includes(clienteSearch.toLowerCase()));
+  if (clienteFilter !== 'all') list = list.filter(p => p.status === clienteFilter);
+
+  document.getElementById('pageContent').innerHTML = `
+    <div class="filter-bar">
+      <input class="filter-input" placeholder="🔍 Buscar cliente..." value="${clienteSearch}" oninput="clienteSearch=this.value;renderClientes()">
+      <select class="filter-select" onchange="clienteFilter=this.value;renderClientes()">
+        <option value="all" ${clienteFilter==='all'?'selected':''}>Todos</option>
+        <option value="ATIVO" ${clienteFilter==='ATIVO'?'selected':''}>Ativo</option>
+        <option value="INATIVO" ${clienteFilter==='INATIVO'?'selected':''}>Inativo</option>
+        <option value="PAUSADO" ${clienteFilter==='PAUSADO'?'selected':''}>Pausado</option>
+      </select>
+      <button class="btn btn-primary" onclick="openModalNewProject()">+ Novo Cliente</button>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr>
+          <th>Nome</th><th>Cota Mensal</th><th>Horas Iniciais</th><th>Saldo</th><th>Status</th><th>Ações</th>
+        </tr></thead>
+        <tbody>
+          ${list.length ? list.map(p => {
+            const saldo = calcSaldo(p);
+            return `<tr>
+              <td><span style="cursor:pointer;color:var(--gold);font-weight:600" onclick="openProject('${p.id}')">${p.name}</span></td>
+              <td>${p.monthlyQuotaHours}h</td>
+              <td class="${p.initialHours < 0 ? 'saldo-neg' : ''}">${fmt(p.initialHours)}h</td>
+              <td class="${saldo < 0 ? 'saldo-neg' : ''}" style="font-weight:700">${fmt(saldo)}h</td>
+              <td>${statusBadge(p.status)}</td>
+              <td><div class="action-cell">
+                <button class="btn btn-ghost btn-sm" onclick="openModalEditProject('${p.id}')">✏️</button>
+                <button class="btn btn-danger btn-sm" onclick="deleteProject('${p.id}')">🗑️</button>
+              </div></td>
+            </tr>`;
+          }).join('') : '<tr><td colspan="6"><div class="empty"><div class="empty-icon">📂</div><div class="empty-text">Nenhum cliente encontrado.</div></div></td></tr>'}
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
+// ── DETAIL ──
+let detailTab = 'tarefas';
+
+function renderDetail(id) {
+  const p = state.projects.find(x => x.id === id);
+  if (!p) { navigate('clientes'); return; }
+  const saldo = calcSaldo(p);
+  const tasks = state.tasks.filter(t => t.projectId === id);
+  const visits = state.visits.filter(v => v.projectId === id);
+
+  document.getElementById('pageTitle').textContent = p.name;
+  document.getElementById('pageContent').innerHTML = `
+    <div class="back-btn" onclick="navigate('clientes')">← Voltar para Clientes</div>
+    <div class="detail-header">
+      <div class="detail-name">${p.name}</div>
+      <div class="detail-meta">
+        <div class="meta-item"><div class="meta-label">Cota Mensal</div><div class="meta-val">${p.monthlyQuotaHours}h</div></div>
+        <div class="meta-item"><div class="meta-label">Horas Iniciais</div><div class="meta-val ${p.initialHours<0?'saldo-neg':''}">${fmt(p.initialHours)}h</div></div>
+        <div class="meta-item"><div class="meta-label">Saldo Real</div><div class="meta-val ${saldo<0?'saldo-neg':''}">${fmt(saldo)}h</div></div>
+        <div class="meta-item"><div class="meta-label">Status</div><div class="meta-val">${statusBadge(p.status)}</div></div>
+      </div>
+    </div>
+    <div class="tabs">
+      <button class="tab ${detailTab==='tarefas'?'active':''}" onclick="switchTab('tarefas','${id}')">✅ Tarefas (${tasks.filter(t=>t.status!=='completed').length})</button>
+      <button class="tab ${detailTab==='visitas'?'active':''}" onclick="switchTab('visitas','${id}')">🕐 Visitas (${visits.length})</button>
+      <button class="tab ${detailTab==='notas'?'active':''}" onclick="switchTab('notas','${id}')">📝 Notas</button>
+      <button class="tab ${detailTab==='contatos'?'active':''}" onclick="switchTab('contatos','${id}')">👤 Contatos</button>
+      <button class="tab ${detailTab==='ocorrencias'?'active':''}" onclick="switchTab('ocorrencias','${id}')">⚠️ Ocorrências</button>
+    </div>
+    <div id="tabContent"></div>
+  `;
+  renderTab(id);
+}
+
+function switchTab(tab, id) {
+  detailTab = tab;
+  document.querySelectorAll('.tab').forEach(el => {
+    el.classList.toggle('active', el.textContent.toLowerCase().includes(tab.substring(0,5)));
+  });
+  renderTab(id);
+}
+
+function renderTab(id) {
+  const el = document.getElementById('tabContent');
+  if (!el) return;
+  if (detailTab === 'tarefas') el.innerHTML = renderTabTarefas(id);
+  else if (detailTab === 'visitas') el.innerHTML = renderTabVisitas(id);
+  else if (detailTab === 'notas') el.innerHTML = renderTabNotas(id);
+  else if (detailTab === 'contatos') el.innerHTML = renderTabContatos(id);
+  else if (detailTab === 'ocorrencias') el.innerHTML = renderTabOcorrencias(id);
+}
+
+function renderTabTarefas(id) {
+  const tasks = state.tasks.filter(t => t.projectId === id);
+  return `
+    <div style="display:flex;justify-content:flex-end;margin-bottom:12px">
+      <button class="btn btn-primary" onclick="openModalNewTask('${id}')">+ Nova Tarefa</button>
+    </div>
+    ${tasks.length ? `<div class="table-wrap"><table>
+      <thead><tr><th>Título</th><th>Responsável</th><th>Prazo</th><th>Status</th><th>Ações</th></tr></thead>
+      <tbody>${tasks.map(t => `<tr>
+        <td><div style="font-weight:600">${t.title}</div>${t.description?`<div style="font-size:.75rem;color:var(--text2);margin-top:2px">${t.description}</div>`:''}</td>
+        <td style="font-size:.82rem;color:var(--text2)">${t.assignedTo||'—'}</td>
+        <td style="font-size:.82rem">${fmtDate(t.deadline)}</td>
+        <td>${statusBadge(t.status)}</td>
+        <td><div class="action-cell">
+          ${t.status!=='completed'?`<button class="btn btn-ghost btn-sm" onclick="completeTask('${t.id}','${id}')">✓</button>`:''}
+          <button class="btn btn-ghost btn-sm" onclick="openModalEditTask('${t.id}','${id}')">✏️</button>
+          <button class="btn btn-danger btn-sm" onclick="deleteTask('${t.id}','${id}')">🗑️</button>
+        </div></td>
+      </tr>`).join('')}</tbody>
+    </table></div>` : '<div class="empty"><div class="empty-icon">✅</div><div class="empty-text">Nenhuma tarefa cadastrada.</div></div>'}
+  `;
+}
+
+function renderTabVisitas(id) {
+  const visits = state.visits.filter(v => v.projectId === id);
+  const total = visits.reduce((acc, v) => acc + parseDuration(v.duration), 0);
+  return `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+      <div style="font-size:.85rem;color:var(--text2)">Total: <strong style="color:var(--gold)">${fmt(total)}h</strong></div>
+      <button class="btn btn-primary" onclick="openModalNewVisit('${id}')">+ Nova Visita</button>
+    </div>
+    ${visits.length ? `<div class="table-wrap"><table>
+      <thead><tr><th>Data</th><th>Duração</th><th>Responsável</th><th>Descrição</th><th>Ações</th></tr></thead>
+      <tbody>${visits.map(v => `<tr>
+        <td>${fmtDate(v.date)}</td>
+        <td style="font-weight:700;color:var(--gold)">${v.duration}</td>
+        <td style="font-size:.82rem;color:var(--text2)">${v.assignedTo||'—'}</td>
+        <td style="font-size:.82rem;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${v.description||'—'}</td>
+        <td><div class="action-cell">
+          <button class="btn btn-ghost btn-sm" onclick="openModalEditVisit('${v.id}','${id}')">✏️</button>
+          <button class="btn btn-danger btn-sm" onclick="deleteVisit('${v.id}','${id}')">🗑️</button>
+        </div></td>
+      </tr>`).join('')}</tbody>
+    </table></div>` : '<div class="empty"><div class="empty-icon">🕐</div><div class="empty-text">Nenhuma visita registrada.</div></div>'}
+  `;
+}
+
+function renderTabNotas(id) {
+  const notes = state.notes.filter(n => n.projectId === id);
+  return `
+    <div style="display:flex;justify-content:flex-end;margin-bottom:12px">
+      <button class="btn btn-primary" onclick="openModalNewNote('${id}')">+ Nova Nota</button>
+    </div>
+    ${notes.length ? notes.map(n => `
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:10px">
+        <div style="font-size:.85rem;color:var(--text);line-height:1.6;white-space:pre-wrap">${n.content}</div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-top:10px">
+          <div style="font-size:.72rem;color:var(--text3)">${n.createdAt ? new Date(n.createdAt).toLocaleString('pt-BR') : ''}</div>
+          <div class="action-cell">
+            <button class="btn btn-ghost btn-sm" onclick="openModalEditNote('${n.id}','${id}')">✏️</button>
+            <button class="btn btn-danger btn-sm" onclick="deleteNote('${n.id}','${id}')">🗑️</button>
+          </div>
+        </div>
+      </div>
+    `).join('') : '<div class="empty"><div class="empty-icon">📝</div><div class="empty-text">Nenhuma nota cadastrada.</div></div>'}
+  `;
+}
+
+function renderTabContatos(id) {
+  const contacts = state.contacts.filter(c => c.projectId === id);
+  return `
+    <div style="display:flex;justify-content:flex-end;margin-bottom:12px">
+      <button class="btn btn-primary" onclick="openModalNewContact('${id}')">+ Novo Contato</button>
+    </div>
+    ${contacts.length ? `<div class="table-wrap"><table>
+      <thead><tr><th>Nome</th><th>Cargo</th><th>E-mail</th><th>Telefone</th><th>Ações</th></tr></thead>
+      <tbody>${contacts.map(c => `<tr>
+        <td style="font-weight:600">${c.name}</td>
+        <td style="font-size:.82rem;color:var(--text2)">${c.role||'—'}</td>
+        <td style="font-size:.82rem">${c.email||'—'}</td>
+        <td style="font-size:.82rem">${c.phone||'—'}</td>
+        <td><div class="action-cell">
+          <button class="btn btn-ghost btn-sm" onclick="openModalEditContact('${c.id}','${id}')">✏️</button>
+          <button class="btn btn-danger btn-sm" onclick="deleteContact('${c.id}','${id}')">🗑️</button>
+        </div></td>
+      </tr>`).join('')}</tbody>
+    </table></div>` : '<div class="empty"><div class="empty-icon">👤</div><div class="empty-text">Nenhum contato cadastrado.</div></div>'}
+  `;
+}
+
+function renderTabOcorrencias(id) {
+  const occs = state.occurrences.filter(o => o.projectId === id);
+  return `
+    <div style="display:flex;justify-content:flex-end;margin-bottom:12px">
+      <button class="btn btn-primary" onclick="openModalNewOccurrence('${id}')">+ Nova Ocorrência</button>
+    </div>
+    ${occs.length ? `<div class="table-wrap"><table>
+      <thead><tr><th>Data</th><th>Título</th><th>Descrição</th><th>Ações</th></tr></thead>
+      <tbody>${occs.map(o => `<tr>
+        <td style="font-size:.82rem">${fmtDate(o.date)}</td>
+        <td style="font-weight:600">${o.title||'—'}</td>
+        <td style="font-size:.82rem;max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${o.description||'—'}</td>
+        <td><div class="action-cell">
+          <button class="btn btn-ghost btn-sm" onclick="openModalEditOccurrence('${o.id}','${id}')">✏️</button>
+          <button class="btn btn-danger btn-sm" onclick="deleteOccurrence('${o.id}','${id}')">🗑️</button>
+        </div></td>
+      </tr>`).join('')}</tbody>
+    </table></div>` : '<div class="empty"><div class="empty-icon">⚠️</div><div class="empty-text">Nenhuma ocorrência registrada.</div></div>'}
+  `;
+}
+
+// ── TAREFAS PAGE ──
+let tarefaSearch = '';
+let tarefaStatus = 'all';
+let tarefaProject = 'all';
+
+function renderTarefas() {
+  let tasks = state.tasks;
+  if (tarefaSearch) tasks = tasks.filter(t => t.title.toLowerCase().includes(tarefaSearch.toLowerCase()));
+  if (tarefaStatus !== 'all') tasks = tasks.filter(t => t.status === tarefaStatus);
+  if (tarefaProject !== 'all') tasks = tasks.filter(t => t.projectId === tarefaProject);
+
+  const projName = id => (state.projects.find(p => p.id === id) || {}).name || '—';
+
+  document.getElementById('pageContent').innerHTML = `
+    <div class="filter-bar">
+      <input class="filter-input" placeholder="🔍 Buscar tarefa..." value="${tarefaSearch}" oninput="tarefaSearch=this.value;renderTarefas()">
+      <select class="filter-select" onchange="tarefaStatus=this.value;renderTarefas()">
+        <option value="all">Todos os status</option>
+        <option value="pending" ${tarefaStatus==='pending'?'selected':''}>Pendentes</option>
+        <option value="completed" ${tarefaStatus==='completed'?'selected':''}>Concluídas</option>
+      </select>
+      <select class="filter-select" onchange="tarefaProject=this.value;renderTarefas()">
+        <option value="all">Todos os clientes</option>
+        ${state.projects.map(p => `<option value="${p.id}" ${tarefaProject===p.id?'selected':''}>${p.name}</option>`).join('')}
+      </select>
+      <button class="btn btn-primary" onclick="openModalNewTask(null)">+ Nova Tarefa</button>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Título</th><th>Cliente</th><th>Responsável</th><th>Prazo</th><th>Status</th><th>Ações</th></tr></thead>
+        <tbody>
+          ${tasks.length ? tasks.map(t => {
+            const overdue = t.status !== 'completed' && t.deadline && t.deadline < new Date().toISOString().split('T')[0];
+            const effectiveStatus = overdue ? 'overdue' : t.status;
+            return `<tr>
+              <td><div style="font-weight:600">${t.title}</div>${t.description?`<div style="font-size:.75rem;color:var(--text2)">${t.description}</div>`:''}</td>
+              <td><span style="cursor:pointer;color:var(--text2);font-size:.82rem" onclick="openProject('${t.projectId}')">${projName(t.projectId)}</span></td>
+              <td style="font-size:.82rem;color:var(--text2)">${t.assignedTo||'—'}</td>
+              <td style="font-size:.82rem${overdue?' color:var(--red)':''}">${fmtDate(t.deadline)}</td>
+              <td>${statusBadge(effectiveStatus)}</td>
+              <td><div class="action-cell">
+                ${t.status!=='completed'?`<button class="btn btn-ghost btn-sm" onclick="completeTask('${t.id}',null)">✓</button>`:''}
+                <button class="btn btn-ghost btn-sm" onclick="openModalEditTask('${t.id}',null)">✏️</button>
+                <button class="btn btn-danger btn-sm" onclick="deleteTask('${t.id}',null)">🗑️</button>
+              </div></td>
+            </tr>`;
+          }).join('') : '<tr><td colspan="6"><div class="empty"><div class="empty-icon">✅</div><div class="empty-text">Nenhuma tarefa encontrada.</div></div></td></tr>'}
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
+// ── AGENDA ──
+let calFilters = { tasks: true, visits: true, occurrences: true, custom: true };
+let agendaProjectFilter = 'all';
+
+function renderAgenda() {
+  document.getElementById('pageContent').innerHTML = `
+    <div class="agenda-filters">
+      <button class="toggle-btn ${calFilters.tasks?'on':''}" onclick="toggleFilter('tasks')">✅ Tarefas</button>
+      <button class="toggle-btn ${calFilters.visits?'on':''}" onclick="toggleFilter('visits')">🕐 Visitas</button>
+      <button class="toggle-btn ${calFilters.occurrences?'on':''}" onclick="toggleFilter('occurrences')">⚠️ Ocorrências</button>
+      <button class="toggle-btn ${calFilters.custom?'on':''}" onclick="toggleFilter('custom')">📅 Compromissos</button>
+      <select class="filter-select" onchange="agendaProjectFilter=this.value;refreshCalendar()">
+        <option value="all">Todos os clientes</option>
+        ${state.projects.map(p=>`<option value="${p.id}">${p.name}</option>`).join('')}
+      </select>
+      <button class="btn btn-primary" onclick="openModalNewCustomEvent()">+ Compromisso</button>
+    </div>
+
+    <!-- Google Calendar Section -->
+    <div class="gcal-section" id="gcalSection">
+      <div class="gcal-header">
+        <div class="gcal-title">📅 Google Agenda</div>
+        <button class="gcal-connect-btn" onclick="connectGoogleCalendar()" id="gcalBtn">
+          <svg width="16" height="16" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+          Conectar Google Agenda
+        </button>
+      </div>
+      <div id="gcalEvents" style="color:var(--text2);font-size:.82rem">Conecte sua conta Google para ver os eventos aqui.</div>
+    </div>
+
+    <div id="calendar"></div>
+  `;
+
+  setTimeout(() => {
+    if (calendarInstance) calendarInstance.destroy();
+    calendarInstance = new FullCalendar.Calendar(document.getElementById('calendar'), {
+      locale: 'pt-br',
+      initialView: 'dayGridMonth',
+      headerToolbar: { left: 'prev,next today', center: 'title', right: 'dayGridMonth,timeGridWeek,listWeek' },
+      events: getCalendarEvents(),
+      eventClick: handleEventClick,
+      dateClick: handleDateClick,
+      height: 600
+    });
+    calendarInstance.render();
+  }, 100);
+}
+
+function getCalendarEvents() {
+  const events = [];
+  const filterProject = p => agendaProjectFilter === 'all' || p === agendaProjectFilter;
+
+  if (calFilters.tasks) {
+    state.tasks.filter(t => t.deadline && filterProject(t.projectId)).forEach(t => {
+      const proj = state.projects.find(p => p.id === t.projectId);
+      events.push({ id: 'task-' + t.id, title: '✅ ' + t.title, start: t.deadline, backgroundColor: '#16a34a', borderColor: '#16a34a', extendedProps: { type: 'task', data: t, projName: proj?.name || '' } });
+    });
+  }
+  if (calFilters.visits) {
+    state.visits.filter(v => v.date && filterProject(v.projectId)).forEach(v => {
+      const proj = state.projects.find(p => p.id === v.projectId);
+      events.push({ id: 'visit-' + v.id, title: '🕐 ' + (proj?.name || 'Visita'), start: v.date, backgroundColor: '#f59e0b', borderColor: '#f59e0b', extendedProps: { type: 'visit', data: v, projName: proj?.name || '' } });
+    });
+  }
+  if (calFilters.occurrences) {
+    state.occurrences.filter(o => o.date && filterProject(o.projectId)).forEach(o => {
+      const proj = state.projects.find(p => p.id === o.projectId);
+      events.push({ id: 'occ-' + o.id, title: '⚠️ ' + (o.title || o.description || 'Ocorrência'), start: o.date, backgroundColor: '#dc2626', borderColor: '#dc2626', extendedProps: { type: 'occurrence', data: o, projName: proj?.name || '' } });
+    });
+  }
+  if (calFilters.custom) {
+    state.customEvents.filter(e => filterProject(e.projectId)).forEach(e => {
+      events.push({ id: 'custom-' + e.id, title: '📅 ' + e.title, start: e.start, end: e.end, backgroundColor: '#3b82f6', borderColor: '#3b82f6', extendedProps: { type: 'custom', data: e } });
+    });
+  }
+  return events;
+}
+
+function toggleFilter(key) {
+  calFilters[key] = !calFilters[key];
+  renderAgenda();
+}
+
+function refreshCalendar() {
+  if (!calendarInstance) return;
+  calendarInstance.removeAllEvents();
+  calendarInstance.addEventSource(getCalendarEvents());
+}
+
+function handleEventClick(info) {
+  const { type, data, projName } = info.event.extendedProps;
+  let html = '';
+  if (type === 'task') html = `<b>${data.title}</b><br>Cliente: ${projName}<br>Prazo: ${fmtDate(data.deadline)}<br>Status: ${data.status}`;
+  else if (type === 'visit') html = `<b>Visita — ${projName}</b><br>Data: ${fmtDate(data.date)}<br>Duração: ${data.duration}<br>${data.description||''}`;
+  else if (type === 'occurrence') html = `<b>${data.title||'Ocorrência'}</b><br>Cliente: ${projName}<br>Data: ${fmtDate(data.date)}<br>${data.description||''}`;
+  else if (type === 'custom') html = `<b>${data.title}</b><br>Início: ${data.start}<br>Fim: ${data.end||''}`;
+  openModal(`<div class="modal-title">Detalhes do Evento</div><div style="color:var(--text2);font-size:.9rem;line-height:1.7">${html}</div><div class="form-actions"><button class="btn btn-ghost" onclick="closeModal()">Fechar</button>${type==='custom'?`<button class="btn btn-danger" onclick="deleteCustomEvent('${data.id}');closeModal()">Excluir</button>`:''}</div>`);
+}
+
+function handleDateClick(info) {
+  openModalNewCustomEvent(info.dateStr);
+}
+
+// ── GOOGLE CALENDAR ──
+const GOOGLE_CLIENT_ID = 'SEU_CLIENT_ID_AQUI.apps.googleusercontent.com';
+const GCAL_SCOPE = 'https://www.googleapis.com/auth/calendar.readonly';
+let gcalTokenClient = null;
+let gcalEvents = [];
+
+function connectGoogleCalendar() {
+  if (!window.google || !window.google.accounts) {
+    // Carrega o script da Google Identity Services se não estiver carregado
+    const script = document.createElement('script');
+    script.src = 'https://accounts.google.com/gsi/client';
+    script.onload = () => initGoogleAuth();
+    document.head.appendChild(script);
+    return;
+  }
+  initGoogleAuth();
+}
+
+function initGoogleAuth() {
+  if (!window.google || GOOGLE_CLIENT_ID === 'SEU_CLIENT_ID_AQUI.apps.googleusercontent.com') {
+    document.getElementById('gcalEvents').innerHTML = `
+      <div style="color:var(--orange);font-size:.82rem">⚠️ Configure o Client ID do Google para ativar esta funcionalidade.<br>
+      <a href="https://console.cloud.google.com/apis/credentials" target="_blank" style="color:var(--gold)">Gerar credencial no Google Cloud Console</a></div>`;
+    return;
+  }
+  gcalTokenClient = google.accounts.oauth2.initTokenClient({
+    client_id: GOOGLE_CLIENT_ID,
+    scope: GCAL_SCOPE,
+    callback: async (response) => {
+      if (response.error) return;
+      await loadGoogleCalendarEvents(response.access_token);
+    }
+  });
+  gcalTokenClient.requestAccessToken();
+}
+
+async function loadGoogleCalendarEvents(token) {
+  const today = new Date().toISOString();
+  const url = `https://www.googleapis.com/calendar/v3/calendars/primary/events?timeMin=${today}&maxResults=20&singleEvents=true&orderBy=startTime&access_token=${token}`;
+  try {
+    const res = await fetch(url);
+    const data = await res.json();
+    gcalEvents = data.items || [];
+    renderGcalEvents();
+  } catch (e) {
+    document.getElementById('gcalEvents').innerHTML = '<div style="color:var(--red)">Erro ao carregar eventos do Google.</div>';
+  }
+}
+
+function renderGcalEvents() {
+  const el = document.getElementById('gcalEvents');
+  if (!el) return;
+  if (!gcalEvents.length) { el.innerHTML = '<div style="color:var(--text2)">Nenhum evento próximo encontrado.</div>'; return; }
+  document.getElementById('gcalBtn').innerHTML = '✓ Google Agenda conectada';
+  document.getElementById('gcalBtn').style.color = 'var(--green)';
+  const colors = ['#4285F4','#34A853','#FBBC05','#EA4335','#7B1FA2'];
+  el.innerHTML = gcalEvents.slice(0, 10).map((ev, i) => {
+    const start = ev.start?.dateTime || ev.start?.date || '';
+    const time = start ? new Date(start).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) : '';
+    return `<div class="gcal-event">
+      <div class="gcal-dot" style="background:${colors[i%colors.length]}"></div>
+      <div class="gcal-info">
+        <div class="gcal-evname">${ev.summary||'(sem título)'}</div>
+        <div class="gcal-evtime">${time}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ── MODALS ──
+function openModal(html) {
+  document.getElementById('modalContent').innerHTML = html;
+  document.getElementById('modalOverlay').classList.add('open');
+}
+
+function closeModal() {
+  document.getElementById('modalOverlay').classList.remove('open');
+}
+
+// ── PROJECT MODAL ──
+function openModalNewProject() {
+  openModal(`
+    <div class="modal-title">Novo Cliente</div>
+    <div class="form-group"><div class="form-label">Nome *</div><input class="form-input" id="f_name" placeholder="Nome do cliente"></div>
+    <div class="form-row">
+      <div class="form-group"><div class="form-label">Cota Mensal (horas)</div><input class="form-input" id="f_quota" type="number" step="0.5" value="0"></div>
+      <div class="form-group"><div class="form-label">Horas Iniciais</div><input class="form-input" id="f_initial" type="number" step="0.5" value="0"></div>
+    </div>
+    <div class="form-group"><div class="form-label">Status</div>
+      <select class="form-input" id="f_status">
+        <option value="ATIVO">ATIVO</option><option value="INATIVO">INATIVO</option><option value="PAUSADO">PAUSADO</option>
+      </select>
+    </div>
+    <div class="form-actions">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveNewProject()">Salvar</button>
+    </div>
+  `);
+}
+
+async function saveNewProject() {
+  const name = document.getElementById('f_name').value.trim();
+  if (!name) return alert('Nome obrigatório');
+  try {
+    const raw = await api.createProject({
+      name,
+      monthly_quota_hours: parseFloat(document.getElementById('f_quota').value) || 0,
+      initial_hours: parseFloat(document.getElementById('f_initial').value) || 0,
+      status: document.getElementById('f_status').value
+    });
+    state.projects.push(mapProject(raw));
+    state.projects.sort((a, b) => a.name.localeCompare(b.name));
+    closeModal();
+    renderClientes();
+    renderSidebarClients();
+  } catch (e) { alert('Erro: ' + e.message); }
+}
+
+function openModalEditProject(id) {
+  const p = state.projects.find(x => x.id === id);
+  if (!p) return;
+  openModal(`
+    <div class="modal-title">Editar Cliente</div>
+    <div class="form-group"><div class="form-label">Nome *</div><input class="form-input" id="f_name" value="${p.name}"></div>
+    <div class="form-row">
+      <div class="form-group"><div class="form-label">Cota Mensal (horas)</div><input class="form-input" id="f_quota" type="number" step="0.5" value="${p.monthlyQuotaHours}"></div>
+      <div class="form-group"><div class="form-label">Horas Iniciais</div><input class="form-input" id="f_initial" type="number" step="0.5" value="${p.initialHours}"></div>
+    </div>
+    <div class="form-group"><div class="form-label">Status</div>
+      <select class="form-input" id="f_status">
+        <option value="ATIVO" ${p.status==='ATIVO'?'selected':''}>ATIVO</option>
+        <option value="INATIVO" ${p.status==='INATIVO'?'selected':''}>INATIVO</option>
+        <option value="PAUSADO" ${p.status==='PAUSADO'?'selected':''}>PAUSADO</option>
+      </select>
+    </div>
+    <div class="form-actions">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveEditProject('${id}')">Salvar</button>
+    </div>
+  `);
+}
+
+async function saveEditProject(id) {
+  const name = document.getElementById('f_name').value.trim();
+  if (!name) return alert('Nome obrigatório');
+  try {
+    const raw = await api.updateProject(id, {
+      name,
+      monthly_quota_hours: parseFloat(document.getElementById('f_quota').value) || 0,
+      initial_hours: parseFloat(document.getElementById('f_initial').value) || 0,
+      status: document.getElementById('f_status').value
+    });
+    const idx = state.projects.findIndex(p => p.id === id);
+    if (idx >= 0) state.projects[idx] = mapProject(raw);
+    closeModal();
+    if (currentPage === 'clientes') renderClientes();
+    else if (currentPage === 'detail') renderDetail(id);
+    renderSidebarClients();
+  } catch (e) { alert('Erro: ' + e.message); }
+}
+
+async function deleteProject(id) {
+  if (!confirm('Excluir este cliente? Todas as tarefas, visitas e notas serão excluídas.')) return;
+  try {
+    await api.deleteProject(id);
+    state.projects = state.projects.filter(p => p.id !== id);
+    renderClientes();
+    renderSidebarClients();
+  } catch (e) { alert('Erro: ' + e.message); }
+}
+
+// ── TASK MODAL ──
+function openModalNewTask(projectId) {
+  openModal(`
+    <div class="modal-title">Nova Tarefa</div>
+    <div class="form-group"><div class="form-label">Título *</div><input class="form-input" id="f_title" placeholder="Título da tarefa"></div>
+    <div class="form-group"><div class="form-label">Descrição</div><textarea class="form-input" id="f_desc" placeholder="Descrição (opcional)"></textarea></div>
+    <div class="form-group"><div class="form-label">Cliente</div>
+      <select class="form-input" id="f_proj">
+        ${state.projects.map(p=>`<option value="${p.id}" ${p.id===projectId?'selected':''}>${p.name}</option>`).join('')}
+      </select>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><div class="form-label">Responsável</div><input class="form-input" id="f_assigned" placeholder="Nome"></div>
+      <div class="form-group"><div class="form-label">Prazo</div><input class="form-input" id="f_deadline" type="date"></div>
+    </div>
+    <div class="form-actions">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveNewTask('${projectId||''}')">Salvar</button>
+    </div>
+  `);
+}
+
+async function saveNewTask(projectId) {
+  const title = document.getElementById('f_title').value.trim();
+  if (!title) return alert('Título obrigatório');
+  const pid = document.getElementById('f_proj')?.value || projectId;
+  try {
+    const raw = await api.createTask({
+      title, description: document.getElementById('f_desc').value,
+      project_id: pid,
+      assigned_to: document.getElementById('f_assigned').value,
+      deadline: document.getElementById('f_deadline').value || null,
+      status: 'pending'
+    });
+    state.tasks.unshift(mapTask(raw));
+    document.getElementById('notifCount').textContent = pendingTasks();
+    closeModal();
+    if (currentPage === 'detail') renderDetail(projectId || pid);
+    else if (currentPage === 'tarefas') renderTarefas();
+  } catch (e) { alert('Erro: ' + e.message); }
+}
+
+function openModalEditTask(id, projectId) {
+  const t = state.tasks.find(x => x.id === id);
+  if (!t) return;
+  openModal(`
+    <div class="modal-title">Editar Tarefa</div>
+    <div class="form-group"><div class="form-label">Título *</div><input class="form-input" id="f_title" value="${t.title}"></div>
+    <div class="form-group"><div class="form-label">Descrição</div><textarea class="form-input" id="f_desc">${t.description||''}</textarea></div>
+    <div class="form-row">
+      <div class="form-group"><div class="form-label">Responsável</div><input class="form-input" id="f_assigned" value="${t.assignedTo||''}"></div>
+      <div class="form-group"><div class="form-label">Prazo</div><input class="form-input" id="f_deadline" type="date" value="${t.deadline||''}"></div>
+    </div>
+    <div class="form-group"><div class="form-label">Status</div>
+      <select class="form-input" id="f_status">
+        <option value="pending" ${t.status==='pending'?'selected':''}>Pendente</option>
+        <option value="completed" ${t.status==='completed'?'selected':''}>Concluída</option>
+      </select>
+    </div>
+    <div class="form-actions">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveEditTask('${id}','${projectId||t.projectId}')">Salvar</button>
+    </div>
+  `);
+}
+
+async function saveEditTask(id, projectId) {
+  const title = document.getElementById('f_title').value.trim();
+  if (!title) return alert('Título obrigatório');
+  try {
+    const raw = await api.updateTask(id, {
+      title, description: document.getElementById('f_desc').value,
+      assigned_to: document.getElementById('f_assigned').value,
+      deadline: document.getElementById('f_deadline').value || null,
+      status: document.getElementById('f_status').value
+    });
+    const idx = state.tasks.findIndex(t => t.id === id);
+    if (idx >= 0) state.tasks[idx] = mapTask(raw);
+    document.getElementById('notifCount').textContent = pendingTasks();
+    closeModal();
+    if (currentPage === 'detail') renderDetail(projectId);
+    else if (currentPage === 'tarefas') renderTarefas();
+  } catch (e) { alert('Erro: ' + e.message); }
+}
+
+async function completeTask(id, projectId) {
+  try {
+    const raw = await api.updateTask(id, { status: 'completed' });
+    const idx = state.tasks.findIndex(t => t.id === id);
+    if (idx >= 0) state.tasks[idx] = mapTask(raw);
+    document.getElementById('notifCount').textContent = pendingTasks();
+    if (currentPage === 'detail' && projectId) renderDetail(projectId);
+    else if (currentPage === 'tarefas') renderTarefas();
+  } catch (e) { alert('Erro: ' + e.message); }
+}
+
+async function deleteTask(id, projectId) {
+  if (!confirm('Excluir esta tarefa?')) return;
+  try {
+    await api.deleteTask(id);
+    state.tasks = state.tasks.filter(t => t.id !== id);
+    document.getElementById('notifCount').textContent = pendingTasks();
+    if (currentPage === 'detail' && projectId) renderDetail(projectId);
+    else if (currentPage === 'tarefas') renderTarefas();
+  } catch (e) { alert('Erro: ' + e.message); }
+}
+
+// ── VISIT MODAL ──
+function openModalNewVisit(projectId) {
+  const today = new Date().toISOString().split('T')[0];
+  openModal(`
+    <div class="modal-title">Nova Visita</div>
+    <div class="form-row">
+      <div class="form-group"><div class="form-label">Data *</div><input class="form-input" id="f_date" type="date" value="${today}"></div>
+      <div class="form-group"><div class="form-label">Duração (HH:MM) *</div><input class="form-input" id="f_duration" placeholder="01:30"></div>
+    </div>
+    <div class="form-group"><div class="form-label">Responsável</div><input class="form-input" id="f_assigned" value="${state.currentUser?.name||''}"></div>
+    <div class="form-group"><div class="form-label">Descrição</div><textarea class="form-input" id="f_desc" placeholder="O que foi realizado..."></textarea></div>
+    <div class="form-actions">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveNewVisit('${projectId}')">Salvar</button>
+    </div>
+  `);
+}
+
+async function saveNewVisit(projectId) {
+  const date = document.getElementById('f_date').value;
+  const duration = document.getElementById('f_duration').value;
+  if (!date || !duration) return alert('Data e duração são obrigatórias');
+  try {
+    const raw = await api.createVisit({
+      project_id: projectId, date, duration,
+      assigned_to: document.getElementById('f_assigned').value,
+      description: document.getElementById('f_desc').value
+    });
+    state.visits.unshift(mapVisit(raw));
+    closeModal();
+    renderDetail(projectId);
+  } catch (e) { alert('Erro: ' + e.message); }
+}
+
+function openModalEditVisit(id, projectId) {
+  const v = state.visits.find(x => x.id === id);
+  if (!v) return;
+  openModal(`
+    <div class="modal-title">Editar Visita</div>
+    <div class="form-row">
+      <div class="form-group"><div class="form-label">Data *</div><input class="form-input" id="f_date" type="date" value="${v.date}"></div>
+      <div class="form-group"><div class="form-label">Duração (HH:MM)</div><input class="form-input" id="f_duration" value="${v.duration}"></div>
+    </div>
+    <div class="form-group"><div class="form-label">Responsável</div><input class="form-input" id="f_assigned" value="${v.assignedTo||''}"></div>
+    <div class="form-group"><div class="form-label">Descrição</div><textarea class="form-input" id="f_desc">${v.description||''}</textarea></div>
+    <div class="form-actions">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveEditVisit('${id}','${projectId}')">Salvar</button>
+    </div>
+  `);
+}
+
+async function saveEditVisit(id, projectId) {
+  try {
+    const raw = await api.updateVisit(id, {
+      date: document.getElementById('f_date').value,
+      duration: document.getElementById('f_duration').value,
+      assigned_to: document.getElementById('f_assigned').value,
+      description: document.getElementById('f_desc').value
+    });
+    const idx = state.visits.findIndex(v => v.id === id);
+    if (idx >= 0) state.visits[idx] = mapVisit(raw);
+    closeModal();
+    renderDetail(projectId);
+  } catch (e) { alert('Erro: ' + e.message); }
+}
+
+async function deleteVisit(id, projectId) {
+  if (!confirm('Excluir esta visita?')) return;
+  try {
+    await api.deleteVisit(id);
+    state.visits = state.visits.filter(v => v.id !== id);
+    renderDetail(projectId);
+  } catch (e) { alert('Erro: ' + e.message); }
+}
+
+// ── NOTE MODAL ──
+function openModalNewNote(projectId) {
+  openModal(`
+    <div class="modal-title">Nova Nota</div>
+    <div class="form-group"><div class="form-label">Conteúdo *</div><textarea class="form-input" id="f_content" placeholder="Escreva a nota..." style="min-height:120px"></textarea></div>
+    <div class="form-actions">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveNewNote('${projectId}')">Salvar</button>
+    </div>
+  `);
+}
+
+async function saveNewNote(projectId) {
+  const content = document.getElementById('f_content').value.trim();
+  if (!content) return;
+  try {
+    const raw = await api.createNote({ project_id: projectId, content });
+    state.notes.unshift(mapNote(raw));
+    closeModal();
+    renderDetail(projectId);
+  } catch (e) { alert('Erro: ' + e.message); }
+}
+
+function openModalEditNote(id, projectId) {
+  const n = state.notes.find(x => x.id === id);
+  if (!n) return;
+  openModal(`
+    <div class="modal-title">Editar Nota</div>
+    <div class="form-group"><div class="form-label">Conteúdo *</div><textarea class="form-input" id="f_content" style="min-height:120px">${n.content}</textarea></div>
+    <div class="form-actions">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveEditNote('${id}','${projectId}')">Salvar</button>
+    </div>
+  `);
+}
+
+async function saveEditNote(id, projectId) {
+  const content = document.getElementById('f_content').value.trim();
+  if (!content) return;
+  try {
+    const raw = await api.updateNote(id, { content });
+    const idx = state.notes.findIndex(n => n.id === id);
+    if (idx >= 0) state.notes[idx] = mapNote(raw);
+    closeModal();
+    renderDetail(projectId);
+  } catch (e) { alert('Erro: ' + e.message); }
+}
+
+async function deleteNote(id, projectId) {
+  if (!confirm('Excluir esta nota?')) return;
+  try {
+    await api.deleteNote(id);
+    state.notes = state.notes.filter(n => n.id !== id);
+    renderDetail(projectId);
+  } catch (e) { alert('Erro: ' + e.message); }
+}
+
+// ── CONTACT MODAL ──
+function openModalNewContact(projectId) {
+  openModal(`
+    <div class="modal-title">Novo Contato</div>
+    <div class="form-group"><div class="form-label">Nome *</div><input class="form-input" id="f_name" placeholder="Nome completo"></div>
+    <div class="form-group"><div class="form-label">Cargo</div><input class="form-input" id="f_role" placeholder="Cargo / Função"></div>
+    <div class="form-row">
+      <div class="form-group"><div class="form-label">E-mail</div><input class="form-input" id="f_email" type="email"></div>
+      <div class="form-group"><div class="form-label">Telefone</div><input class="form-input" id="f_phone" placeholder="(00) 00000-0000"></div>
+    </div>
+    <div class="form-actions">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveNewContact('${projectId}')">Salvar</button>
+    </div>
+  `);
+}
+
+async function saveNewContact(projectId) {
+  const name = document.getElementById('f_name').value.trim();
+  if (!name) return alert('Nome obrigatório');
+  try {
+    const raw = await api.createContact({ project_id: projectId, name, role: document.getElementById('f_role').value, email: document.getElementById('f_email').value, phone: document.getElementById('f_phone').value });
+    state.contacts.push(mapContact(raw));
+    state.contacts.sort((a, b) => a.name.localeCompare(b.name));
+    closeModal();
+    renderDetail(projectId);
+  } catch (e) { alert('Erro: ' + e.message); }
+}
+
+function openModalEditContact(id, projectId) {
+  const c = state.contacts.find(x => x.id === id);
+  if (!c) return;
+  openModal(`
+    <div class="modal-title">Editar Contato</div>
+    <div class="form-group"><div class="form-label">Nome *</div><input class="form-input" id="f_name" value="${c.name}"></div>
+    <div class="form-group"><div class="form-label">Cargo</div><input class="form-input" id="f_role" value="${c.role||''}"></div>
+    <div class="form-row">
+      <div class="form-group"><div class="form-label">E-mail</div><input class="form-input" id="f_email" type="email" value="${c.email||''}"></div>
+      <div class="form-group"><div class="form-label">Telefone</div><input class="form-input" id="f_phone" value="${c.phone||''}"></div>
+    </div>
+    <div class="form-actions">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveEditContact('${id}','${projectId}')">Salvar</button>
+    </div>
+  `);
+}
+
+async function saveEditContact(id, projectId) {
+  const name = document.getElementById('f_name').value.trim();
+  if (!name) return alert('Nome obrigatório');
+  try {
+    const raw = await api.updateContact(id, { name, role: document.getElementById('f_role').value, email: document.getElementById('f_email').value, phone: document.getElementById('f_phone').value });
+    const idx = state.contacts.findIndex(c => c.id === id);
+    if (idx >= 0) state.contacts[idx] = mapContact(raw);
+    closeModal();
+    renderDetail(projectId);
+  } catch (e) { alert('Erro: ' + e.message); }
+}
+
+async function deleteContact(id, projectId) {
+  if (!confirm('Excluir este contato?')) return;
+  try {
+    await api.deleteContact(id);
+    state.contacts = state.contacts.filter(c => c.id !== id);
+    renderDetail(projectId);
+  } catch (e) { alert('Erro: ' + e.message); }
+}
+
+// ── OCCURRENCE MODAL ──
+function openModalNewOccurrence(projectId) {
+  const today = new Date().toISOString().split('T')[0];
+  openModal(`
+    <div class="modal-title">Nova Ocorrência</div>
+    <div class="form-group"><div class="form-label">Título *</div><input class="form-input" id="f_title" placeholder="Título da ocorrência"></div>
+    <div class="form-group"><div class="form-label">Data</div><input class="form-input" id="f_date" type="date" value="${today}"></div>
+    <div class="form-group"><div class="form-label">Descrição</div><textarea class="form-input" id="f_desc" placeholder="Detalhes..."></textarea></div>
+    <div class="form-actions">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveNewOccurrence('${projectId||''}')">Salvar</button>
+    </div>
+  `);
+}
+
+async function saveNewOccurrence(projectId) {
+  const title = document.getElementById('f_title').value.trim();
+  if (!title) return alert('Título obrigatório');
+  try {
+    const raw = await api.createOccurrence({ project_id: projectId, title, date: document.getElementById('f_date').value, description: document.getElementById('f_desc').value });
+    state.occurrences.unshift(mapOccurrence(raw));
+    closeModal();
+    if (currentPage === 'detail' && projectId) renderDetail(projectId);
+  } catch (e) { alert('Erro: ' + e.message); }
+}
+
+function openModalEditOccurrence(id, projectId) {
+  const o = state.occurrences.find(x => x.id === id);
+  if (!o) return;
+  openModal(`
+    <div class="modal-title">Editar Ocorrência</div>
+    <div class="form-group"><div class="form-label">Título *</div><input class="form-input" id="f_title" value="${o.title||''}"></div>
+    <div class="form-group"><div class="form-label">Data</div><input class="form-input" id="f_date" type="date" value="${o.date||''}"></div>
+    <div class="form-group"><div class="form-label">Descrição</div><textarea class="form-input" id="f_desc">${o.description||''}</textarea></div>
+    <div class="form-actions">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveEditOccurrence('${id}','${projectId}')">Salvar</button>
+    </div>
+  `);
+}
+
+async function saveEditOccurrence(id, projectId) {
+  const title = document.getElementById('f_title').value.trim();
+  if (!title) return alert('Título obrigatório');
+  try {
+    const raw = await api.updateOccurrence(id, { title, date: document.getElementById('f_date').value, description: document.getElementById('f_desc').value });
+    const idx = state.occurrences.findIndex(o => o.id === id);
+    if (idx >= 0) state.occurrences[idx] = mapOccurrence(raw);
+    closeModal();
+    if (currentPage === 'detail' && projectId) renderDetail(projectId);
+  } catch (e) { alert('Erro: ' + e.message); }
+}
+
+async function deleteOccurrence(id, projectId) {
+  if (!confirm('Excluir esta ocorrência?')) return;
+  try {
+    await api.deleteOccurrence(id);
+    state.occurrences = state.occurrences.filter(o => o.id !== id);
+    if (currentPage === 'detail' && projectId) renderDetail(projectId);
+  } catch (e) { alert('Erro: ' + e.message); }
+}
+
+// ── CUSTOM EVENT MODAL ──
+function openModalNewCustomEvent(date) {
+  const today = date || new Date().toISOString().split('T')[0];
+  openModal(`
+    <div class="modal-title">Novo Compromisso</div>
+    <div class="form-group"><div class="form-label">Título *</div><input class="form-input" id="f_title" placeholder="Título do compromisso"></div>
+    <div class="form-row">
+      <div class="form-group"><div class="form-label">Início</div><input class="form-input" id="f_start" type="datetime-local" value="${today}T09:00"></div>
+      <div class="form-group"><div class="form-label">Fim</div><input class="form-input" id="f_end" type="datetime-local" value="${today}T10:00"></div>
+    </div>
+    <div class="form-group"><div class="form-label">Cliente (opcional)</div>
+      <select class="form-input" id="f_proj">
+        <option value="">Nenhum</option>
+        ${state.projects.map(p=>`<option value="${p.id}">${p.name}</option>`).join('')}
+      </select>
+    </div>
+    <div class="form-group"><div class="form-label">Responsável</div><input class="form-input" id="f_assigned" value="${state.currentUser?.name||''}"></div>
+    <div class="form-actions">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveNewCustomEvent()">Salvar</button>
+    </div>
+  `);
+}
+
+function saveNewCustomEvent() {
+  const title = document.getElementById('f_title').value.trim();
+  if (!title) return alert('Título obrigatório');
+  const ev = {
+    id: Date.now().toString(),
+    title,
+    start: document.getElementById('f_start').value,
+    end: document.getElementById('f_end').value,
+    projectId: document.getElementById('f_proj').value,
+    assignedTo: document.getElementById('f_assigned').value
+  };
+  state.customEvents.push(ev);
+  saveCustomEvents();
+  closeModal();
+  renderAgenda();
+}
+
+function deleteCustomEvent(id) {
+  state.customEvents = state.customEvents.filter(e => e.id !== id);
+  saveCustomEvents();
+}
+
+// ── INIT ──
+initLogin();
+</script>
+</body>
+</html>
