@@ -152,11 +152,65 @@ tr:hover td{background:#FAFAFA}
 .meta-label{font-size:.68rem;color:var(--text2);text-transform:uppercase;letter-spacing:.8px;font-weight:600}
 .meta-val{font-size:1rem;font-weight:700;color:var(--text)}
 
+/* ── DETAIL HEADER ── */
+.detail-topbar{display:flex;align-items:center;justify-content:space-between;padding:16px 28px;background:var(--white);border-bottom:1px solid var(--border);position:sticky;top:53px;z-index:9}
+.detail-topbar-left{display:flex;align-items:center;gap:12px}
+.detail-back{background:none;border:none;cursor:pointer;color:var(--text2);font-size:1.1rem;display:flex;align-items:center;padding:4px;border-radius:6px;transition:color .2s}
+.detail-back:hover{color:var(--blue)}
+.detail-client-name{font-size:1.4rem;font-weight:800;color:var(--blue)}
+.detail-status-badge{background:#DCFCE7;color:#16A34A;font-size:.72rem;font-weight:700;padding:3px 10px;border-radius:20px;text-transform:uppercase}
+.detail-topbar-right{text-align:right}
+.detail-credit-label{font-size:.65rem;color:var(--text2);text-transform:uppercase;letter-spacing:.8px;font-weight:600}
+.detail-credit-value{font-size:1.3rem;font-weight:800;color:var(--text)}
+
 /* ── TABS ── */
-.tabs{display:flex;gap:2px;background:var(--white);border:1px solid var(--border);border-radius:10px;padding:4px;margin-bottom:18px;flex-wrap:wrap;box-shadow:0 1px 4px rgba(0,0,0,.04)}
-.tab{padding:7px 14px;border-radius:7px;font-size:.82rem;font-weight:600;cursor:pointer;color:var(--text2);transition:all .2s;border:none;background:none}
-.tab.active{background:var(--blue);color:#fff}
-.tab:hover:not(.active){background:var(--bg);color:var(--text)}
+.tabs{display:flex;gap:0;background:var(--white);border-bottom:1px solid var(--border);margin-bottom:0;flex-wrap:wrap}
+.tab{padding:14px 20px;font-size:.88rem;font-weight:500;cursor:pointer;color:var(--text2);transition:all .15s;border:none;background:none;border-bottom:2px solid transparent;margin-bottom:-1px}
+.tab.active{color:var(--blue);border-bottom-color:var(--blue);font-weight:600}
+.tab:hover:not(.active){color:var(--text)}
+
+/* ── TAB CONTENT ── */
+.tab-content-wrap{padding:24px}
+.filter-card{background:var(--white);border:1px solid var(--border);border-radius:10px;padding:16px 20px;margin-bottom:16px;display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+.filter-card-label{display:flex;align-items:center;gap:6px;font-size:.75rem;color:var(--text2);font-weight:600;letter-spacing:.5px;text-transform:uppercase}
+.filter-group{display:flex;flex-direction:column;gap:4px}
+.filter-group-label{font-size:.68rem;color:var(--text2);font-weight:600;letter-spacing:.5px;text-transform:uppercase}
+.clear-btn{margin-left:auto;font-size:.78rem;color:var(--text2);background:none;border:none;cursor:pointer;font-weight:600}
+.clear-btn:hover{color:var(--red)}
+
+/* ── TASK TABLE ── */
+.list-card{background:var(--white);border:1px solid var(--border);border-radius:10px;overflow:hidden}
+.list-card-header{display:flex;align-items:center;justify-content:space-between;padding:14px 20px;border-bottom:1px solid var(--border)}
+.list-card-title{font-size:.72rem;font-weight:700;color:var(--text2);letter-spacing:1px;text-transform:uppercase}
+.list-card-actions{display:flex;align-items:center;gap:12px}
+.list-action-link{font-size:.78rem;color:var(--blue);font-weight:600;cursor:pointer;display:flex;align-items:center;gap:4px;background:none;border:none}
+.list-action-link:hover{text-decoration:underline}
+.list-action-add{font-size:.78rem;color:var(--blue);font-weight:700;cursor:pointer;background:none;border:none}
+.task-table{width:100%;border-collapse:collapse}
+.task-table th{padding:10px 16px;text-align:left;font-size:.65rem;color:var(--text2);text-transform:uppercase;letter-spacing:.8px;border-bottom:1px solid var(--border);font-weight:600;background:#FAFAFA}
+.task-table td{padding:14px 16px;font-size:.82rem;color:var(--text);border-bottom:1px solid var(--border);vertical-align:middle}
+.task-table tr:last-child td{border-bottom:none}
+.task-table tr:hover td{background:#FAFAFA}
+.task-check{width:16px;height:16px;accent-color:var(--blue);cursor:pointer}
+.task-name{font-weight:600;font-size:.82rem;text-transform:uppercase;color:var(--text)}
+.consultant-avatar{width:30px;height:30px;border-radius:50%;background:#E5E7EB;color:var(--text);display:inline-flex;align-items:center;justify-content:center;font-size:.7rem;font-weight:700;text-transform:uppercase}
+.badge-pendente{background:#FEF3C7;color:#D97706;font-size:.7rem;font-weight:700;padding:3px 10px;border-radius:6px;text-transform:uppercase}
+.badge-concluida{background:#DCFCE7;color:#16A34A;font-size:.7rem;font-weight:700;padding:3px 10px;border-radius:6px;text-transform:uppercase}
+.badge-atrasada{background:#FEE2E2;color:#DC2626;font-size:.7rem;font-weight:700;padding:3px 10px;border-radius:6px;text-transform:uppercase}
+.icon-btn{background:none;border:none;cursor:pointer;padding:4px;border-radius:6px;font-size:.85rem;color:var(--text2);transition:color .15s}
+.icon-btn:hover{color:var(--blue)}
+.icon-btn.del:hover{color:var(--red)}
+
+/* ── VISIT TIMELINE ── */
+.visit-item{display:grid;grid-template-columns:20px 1fr auto;gap:12px;align-items:start;padding:14px 0;border-bottom:1px solid var(--border)}
+.visit-item:last-child{border-bottom:none}
+.visit-dot{width:12px;height:12px;border-radius:50%;background:var(--blue);margin-top:4px;flex-shrink:0}
+.visit-meta{display:flex;align-items:center;gap:8px;margin-bottom:4px}
+.visit-date{font-size:.82rem;font-weight:600;color:var(--text)}
+.visit-consultant{font-size:.75rem;font-weight:700;color:var(--blue);text-transform:uppercase}
+.visit-desc{font-size:.82rem;color:var(--text2);line-height:1.5;margin-top:4px}
+.visit-duration{font-size:.95rem;font-weight:700;color:var(--blue);white-space:nowrap}
+.visit-right{display:flex;align-items:center;gap:6px}
 
 /* ── MODAL ── */
 .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:100;display:flex;align-items:center;justify-content:center;padding:16px;display:none}
@@ -665,6 +719,8 @@ function renderSidebarClients() {
 // ── NAVIGATION ──
 function navigate(page, projectId) {
   currentPage = page;
+  // Reset padding for non-detail pages
+  document.getElementById('pageContent').style.padding = page === 'detail' ? '0' : '24px';
   document.querySelectorAll('.menu-item').forEach(el => el.classList.remove('active'));
   const navEl = document.getElementById('nav-' + page);
   if (navEl) navEl.classList.add('active');
@@ -796,42 +852,47 @@ function renderClientes() {
 // ── DETAIL ──
 let detailTab = 'tarefas';
 
+function initials(name) {
+  if (!name) return '?';
+  return name.split(' ').slice(0,2).map(w=>w[0]).join('').toUpperCase();
+}
+
 function renderDetail(id) {
   const p = state.projects.find(x => x.id === id);
   if (!p) { navigate('clientes'); return; }
   const saldo = calcSaldo(p);
-  const tasks = state.tasks.filter(t => t.projectId === id);
-  const visits = state.visits.filter(v => v.projectId === id);
 
   document.getElementById('pageTitle').textContent = p.name;
+  // Inject detail topbar + tabs into pageContent
+  document.getElementById('pageContent').style.padding = '0';
   document.getElementById('pageContent').innerHTML = `
-    <div class="back-btn" onclick="navigate('clientes')">← Voltar para Clientes</div>
-    <div class="detail-header">
-      <div class="detail-name">${p.name}</div>
-      <div class="detail-meta">
-        <div class="meta-item"><div class="meta-label">Cota Mensal</div><div class="meta-val">${p.monthlyQuotaHours}h</div></div>
-        <div class="meta-item"><div class="meta-label">Horas Iniciais</div><div class="meta-val ${p.initialHours<0?'saldo-neg':''}">${fmt(p.initialHours)}h</div></div>
-        <div class="meta-item"><div class="meta-label">Saldo Real</div><div class="meta-val ${saldo<0?'saldo-neg':''}">${fmt(saldo)}h</div></div>
-        <div class="meta-item"><div class="meta-label">Status</div><div class="meta-val">${statusBadge(p.status)}</div></div>
+    <div class="detail-topbar">
+      <div class="detail-topbar-left">
+        <button class="detail-back" onclick="navigate('clientes')">←</button>
+        <div class="detail-client-name">${p.name}</div>
+        <span class="detail-status-badge">${p.status}</span>
+      </div>
+      <div class="detail-topbar-right">
+        <div class="detail-credit-label">Crédito Total &nbsp;&nbsp;&nbsp; Total</div>
+        <div class="detail-credit-value ${saldo<0?'saldo-neg':''}">${fmt(saldo)} h</div>
       </div>
     </div>
-    <div class="tabs">
-      <button class="tab ${detailTab==='tarefas'?'active':''}" onclick="switchTab('tarefas','${id}')">✅ Tarefas (${tasks.filter(t=>t.status!=='completed').length})</button>
-      <button class="tab ${detailTab==='visitas'?'active':''}" onclick="switchTab('visitas','${id}')">🕐 Visitas (${visits.length})</button>
-      <button class="tab ${detailTab==='notas'?'active':''}" onclick="switchTab('notas','${id}')">📝 Notas</button>
-      <button class="tab ${detailTab==='contatos'?'active':''}" onclick="switchTab('contatos','${id}')">👤 Contatos</button>
-      <button class="tab ${detailTab==='ocorrencias'?'active':''}" onclick="switchTab('ocorrencias','${id}')">⚠️ Ocorrências</button>
+    <div class="tabs" id="detailTabs">
+      <button class="tab ${detailTab==='tarefas'?'active':''}" onclick="switchTab('tarefas','${id}')">Tarefas</button>
+      <button class="tab ${detailTab==='visitas'?'active':''}" onclick="switchTab('visitas','${id}')">Registro de Visitas</button>
+      <button class="tab ${detailTab==='notas'?'active':''}" onclick="switchTab('notas','${id}')">Notas</button>
+      <button class="tab ${detailTab==='contatos'?'active':''}" onclick="switchTab('contatos','${id}')">Contatos</button>
+      <button class="tab ${detailTab==='ocorrencias'?'active':''}" onclick="switchTab('ocorrencias','${id}')">Ocorrências</button>
     </div>
-    <div id="tabContent"></div>
+    <div id="tabContent" class="tab-content-wrap"></div>
   `;
   renderTab(id);
 }
 
 function switchTab(tab, id) {
   detailTab = tab;
-  document.querySelectorAll('.tab').forEach(el => {
-    el.classList.toggle('active', el.textContent.toLowerCase().includes(tab.substring(0,5)));
-  });
+  document.querySelectorAll('#detailTabs .tab').forEach(el => el.classList.remove('active'));
+  event.currentTarget.classList.add('active');
   renderTab(id);
 }
 
@@ -845,50 +906,133 @@ function renderTab(id) {
   else if (detailTab === 'ocorrencias') el.innerHTML = renderTabOcorrencias(id);
 }
 
+function taskBadge(t) {
+  if (t.status === 'completed') return '<span class="badge-concluida">Concluída</span>';
+  if (t.deadline && t.deadline < new Date().toISOString().split('T')[0]) return '<span class="badge-atrasada">Atrasada</span>';
+  return '<span class="badge-pendente">Pendente</span>';
+}
+
 function renderTabTarefas(id) {
   const tasks = state.tasks.filter(t => t.projectId === id);
+  const users = [...new Set(tasks.map(t=>t.assignedTo).filter(Boolean))];
   return `
-    <div style="display:flex;justify-content:flex-end;margin-bottom:12px">
-      <button class="btn btn-primary" onclick="openModalNewTask('${id}')">+ Nova Tarefa</button>
+    <div class="filter-card">
+      <span class="filter-card-label">⚙ Filtros</span>
+      <div class="filter-group">
+        <div class="filter-group-label">Atribuído a</div>
+        <select class="filter-select" id="tf_user" onchange="renderTab('${id}')">
+          <option value="">Todos</option>
+          ${users.map(u=>`<option value="${u}">${u}</option>`).join('')}
+        </select>
+      </div>
+      <div class="filter-group">
+        <div class="filter-group-label">Status</div>
+        <select class="filter-select" id="tf_status" onchange="renderTab('${id}')">
+          <option value="">Todos</option>
+          <option value="pending">Pendente</option>
+          <option value="completed">Concluída</option>
+        </select>
+      </div>
+      <div class="filter-group">
+        <div class="filter-group-label">De</div>
+        <input class="filter-input" type="date" id="tf_from" style="width:140px" onchange="renderTab('${id}')">
+      </div>
+      <div class="filter-group">
+        <div class="filter-group-label">Até</div>
+        <input class="filter-input" type="date" id="tf_to" style="width:140px" onchange="renderTab('${id}')">
+      </div>
+      <button class="clear-btn" onclick="clearTaskFilters('${id}')">Limpar</button>
     </div>
-    ${tasks.length ? `<div class="table-wrap"><table>
-      <thead><tr><th>Título</th><th>Responsável</th><th>Prazo</th><th>Status</th><th>Ações</th></tr></thead>
-      <tbody>${tasks.map(t => `<tr>
-        <td><div style="font-weight:600">${t.title}</div>${t.description?`<div style="font-size:.75rem;color:var(--text2);margin-top:2px">${t.description}</div>`:''}</td>
-        <td style="font-size:.82rem;color:var(--text2)">${t.assignedTo||'—'}</td>
-        <td style="font-size:.82rem">${fmtDate(t.deadline)}</td>
-        <td>${statusBadge(t.status)}</td>
-        <td><div class="action-cell">
-          ${t.status!=='completed'?`<button class="btn btn-ghost btn-sm" onclick="completeTask('${t.id}','${id}')">✓</button>`:''}
-          <button class="btn btn-ghost btn-sm" onclick="openModalEditTask('${t.id}','${id}')">✏️</button>
-          <button class="btn btn-danger btn-sm" onclick="deleteTask('${t.id}','${id}')">🗑️</button>
-        </div></td>
-      </tr>`).join('')}</tbody>
-    </table></div>` : '<div class="empty"><div class="empty-icon">✅</div><div class="empty-text">Nenhuma tarefa cadastrada.</div></div>'}
+    <div class="list-card">
+      <div class="list-card-header">
+        <span class="list-card-title">Lista de Tarefas</span>
+        <div class="list-card-actions">
+          <button class="list-action-add" onclick="openModalNewTask('${id}')">+ Adicionar</button>
+        </div>
+      </div>
+      <table class="task-table">
+        <thead><tr>
+          <th style="width:32px"></th>
+          <th>Tarefa</th><th>Consultor(a)</th><th>Prazo</th><th>Tempo Previsto</th><th>Status</th><th>Ações</th>
+        </tr></thead>
+        <tbody>
+          ${tasks.length ? tasks.map(t => `<tr>
+            <td><input type="checkbox" class="task-check" ${t.status==='completed'?'checked':''} onchange="completeTask('${t.id}','${id}')"></td>
+            <td><span class="task-name">${t.title}</span>${t.description?`<div style="font-size:.75rem;color:var(--text2);margin-top:2px;font-weight:400;text-transform:none">${t.description}</div>`:''}</td>
+            <td><div class="consultant-avatar" title="${t.assignedTo||''}">${initials(t.assignedTo)}</div></td>
+            <td style="color:var(--text2);font-size:.82rem">${fmtDate(t.deadline)}</td>
+            <td style="color:var(--text2);font-size:.82rem">${t.estimatedTime||'–'}</td>
+            <td>${taskBadge(t)}</td>
+            <td><div style="display:flex;gap:2px">
+              <button class="icon-btn" onclick="openModalEditTask('${t.id}','${id}')">✏</button>
+              <button class="icon-btn del" onclick="deleteTask('${t.id}','${id}')">🗑</button>
+            </div></td>
+          </tr>`).join('') : `<tr><td colspan="7"><div class="empty"><div class="empty-icon">✅</div><div class="empty-text">Nenhuma tarefa cadastrada.</div></div></td></tr>`}
+        </tbody>
+      </table>
+    </div>
   `;
+}
+
+function clearTaskFilters(id) {
+  ['tf_user','tf_status','tf_from','tf_to'].forEach(i => { const el = document.getElementById(i); if(el) el.value=''; });
+  renderTab(id);
 }
 
 function renderTabVisitas(id) {
   const visits = state.visits.filter(v => v.projectId === id);
   const total = visits.reduce((acc, v) => acc + parseDuration(v.duration), 0);
+  const users = [...new Set(visits.map(v=>v.assignedTo).filter(Boolean))];
   return `
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
-      <div style="font-size:.85rem;color:var(--text2)">Total: <strong style="color:var(--gold)">${fmt(total)}h</strong></div>
-      <button class="btn btn-primary" onclick="openModalNewVisit('${id}')">+ Nova Visita</button>
+    <div class="filter-card">
+      <span class="filter-card-label">⚙ Filtros</span>
+      <div class="filter-group">
+        <div class="filter-group-label">Consultor(a)</div>
+        <select class="filter-select" id="vf_user">
+          <option value="">Todos</option>
+          ${users.map(u=>`<option value="${u}">${u}</option>`).join('')}
+        </select>
+      </div>
+      <div class="filter-group">
+        <div class="filter-group-label">Data Início</div>
+        <input class="filter-input" type="date" id="vf_from" style="width:140px">
+      </div>
+      <div class="filter-group">
+        <div class="filter-group-label">Data Fim</div>
+        <input class="filter-input" type="date" id="vf_to" style="width:140px">
+      </div>
+      <button class="clear-btn">Limpar</button>
     </div>
-    ${visits.length ? `<div class="table-wrap"><table>
-      <thead><tr><th>Data</th><th>Duração</th><th>Responsável</th><th>Descrição</th><th>Ações</th></tr></thead>
-      <tbody>${visits.map(v => `<tr>
-        <td>${fmtDate(v.date)}</td>
-        <td style="font-weight:700;color:var(--gold)">${v.duration}</td>
-        <td style="font-size:.82rem;color:var(--text2)">${v.assignedTo||'—'}</td>
-        <td style="font-size:.82rem;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${v.description||'—'}</td>
-        <td><div class="action-cell">
-          <button class="btn btn-ghost btn-sm" onclick="openModalEditVisit('${v.id}','${id}')">✏️</button>
-          <button class="btn btn-danger btn-sm" onclick="deleteVisit('${v.id}','${id}')">🗑️</button>
-        </div></td>
-      </tr>`).join('')}</tbody>
-    </table></div>` : '<div class="empty"><div class="empty-icon">🕐</div><div class="empty-text">Nenhuma visita registrada.</div></div>'}
+    <div class="list-card">
+      <div class="list-card-header">
+        <div style="display:flex;align-items:center;gap:10px">
+          <span class="list-card-title">Registro de Visitas</span>
+          <span style="font-size:.75rem;color:var(--text2)">Total: <strong style="color:var(--blue)">${fmt(total)}h</strong></span>
+        </div>
+        <div class="list-card-actions">
+          <button class="list-action-link" onclick="openModalNewVisit('${id}')">+ Registrar</button>
+        </div>
+      </div>
+      <div style="padding:0 20px">
+        ${visits.length ? visits.map(v => `
+          <div class="visit-item">
+            <div class="visit-dot"></div>
+            <div>
+              <div class="visit-meta">
+                <span class="visit-date">${fmtDate(v.date)}</span>
+              </div>
+              <div class="visit-consultant">${v.assignedTo||'—'}</div>
+              ${v.description ? `<div class="visit-desc">${v.description}</div>` : ''}
+            </div>
+            <div class="visit-right">
+              <span class="visit-duration">${v.duration}</span>
+              <button class="icon-btn" onclick="openModalEditVisit('${v.id}','${id}')">✏</button>
+              <button class="icon-btn del" onclick="deleteVisit('${v.id}','${id}')">🗑</button>
+            </div>
+          </div>
+        `).join('') : '<div class="empty"><div class="empty-icon">🕐</div><div class="empty-text">Nenhuma visita registrada.</div></div>'}
+      </div>
+    </div>
   `;
 }
 
