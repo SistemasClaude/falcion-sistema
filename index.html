@@ -813,7 +813,7 @@ function renderClientes() {
   if (clienteFilter !== 'all') list = list.filter(p => p.status === clienteFilter);
 
   document.getElementById('pageContent').innerHTML = `
-    <div class="filter-bar">
+    <div class="filter-bar" style="margin-bottom:16px">
       <input class="filter-input" placeholder="🔍 Buscar cliente..." value="${clienteSearch}" oninput="clienteSearch=this.value;renderClientes()">
       <select class="filter-select" onchange="clienteFilter=this.value;renderClientes()">
         <option value="all" ${clienteFilter==='all'?'selected':''}>Todos</option>
@@ -823,23 +823,32 @@ function renderClientes() {
       </select>
       <button class="btn btn-primary" onclick="openModalNewProject()">+ Novo Cliente</button>
     </div>
-    <div class="table-wrap">
-      <table>
+    <div class="list-card">
+      <div class="list-card-header">
+        <span class="list-card-title">Clientes (${list.length})</span>
+      </div>
+      <table class="task-table">
         <thead><tr>
-          <th>Nome</th><th>Cota Mensal</th><th>Horas Iniciais</th><th>Saldo</th><th>Status</th><th>Ações</th>
+          <th>Nome</th><th>Cota Mensal</th><th>Horas Iniciais</th><th>Saldo Real</th><th>Status</th><th>Ações</th>
         </tr></thead>
         <tbody>
           ${list.length ? list.map(p => {
             const saldo = calcSaldo(p);
+            const stMap = {'ATIVO':'badge-green','INATIVO':'badge-red','PAUSADO':'badge-orange'};
             return `<tr>
-              <td><span style="cursor:pointer;color:var(--gold);font-weight:600" onclick="openProject('${p.id}')">${p.name}</span></td>
-              <td>${p.monthlyQuotaHours}h</td>
-              <td class="${p.initialHours < 0 ? 'saldo-neg' : ''}">${fmt(p.initialHours)}h</td>
-              <td class="${saldo < 0 ? 'saldo-neg' : ''}" style="font-weight:700">${fmt(saldo)}h</td>
-              <td>${statusBadge(p.status)}</td>
-              <td><div class="action-cell">
-                <button class="btn btn-ghost btn-sm" onclick="openModalEditProject('${p.id}')">✏️</button>
-                <button class="btn btn-danger btn-sm" onclick="deleteProject('${p.id}')">🗑️</button>
+              <td>
+                <div style="display:flex;align-items:center;gap:10px">
+                  ${p.imageUrl ? `<img src="${p.imageUrl}" style="width:32px;height:32px;border-radius:6px;object-fit:cover">` : `<div style="width:32px;height:32px;border-radius:6px;background:#F3F4F6;display:flex;align-items:center;justify-content:center;font-size:.8rem">🏢</div>`}
+                  <span style="cursor:pointer;color:var(--blue);font-weight:600" onclick="openProject('${p.id}')">${p.name}</span>
+                </div>
+              </td>
+              <td style="font-size:.85rem">${p.monthlyQuotaHours}h</td>
+              <td style="font-size:.85rem" class="${p.initialHours < 0 ? 'saldo-neg' : ''}">${fmt(p.initialHours)}h</td>
+              <td style="font-weight:700" class="${saldo < 0 ? 'saldo-neg' : ''}">${fmt(saldo)}h</td>
+              <td><span class="badge ${stMap[p.status]||'badge-blue'}">${p.status}</span></td>
+              <td><div style="display:flex;gap:4px">
+                <button class="icon-btn" onclick="openModalEditProject('${p.id}')">✏</button>
+                <button class="icon-btn del" onclick="deleteProject('${p.id}')">🗑</button>
               </div></td>
             </tr>`;
           }).join('') : '<tr><td colspan="6"><div class="empty"><div class="empty-icon">📂</div><div class="empty-text">Nenhum cliente encontrado.</div></div></td></tr>'}
@@ -1039,64 +1048,87 @@ function renderTabVisitas(id) {
 function renderTabNotas(id) {
   const notes = state.notes.filter(n => n.projectId === id);
   return `
-    <div style="display:flex;justify-content:flex-end;margin-bottom:12px">
-      <button class="btn btn-primary" onclick="openModalNewNote('${id}')">+ Nova Nota</button>
-    </div>
-    ${notes.length ? notes.map(n => `
-      <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:10px">
-        <div style="font-size:.85rem;color:var(--text);line-height:1.6;white-space:pre-wrap">${n.content}</div>
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-top:10px">
-          <div style="font-size:.72rem;color:var(--text3)">${n.createdAt ? new Date(n.createdAt).toLocaleString('pt-BR') : ''}</div>
-          <div class="action-cell">
-            <button class="btn btn-ghost btn-sm" onclick="openModalEditNote('${n.id}','${id}')">✏️</button>
-            <button class="btn btn-danger btn-sm" onclick="deleteNote('${n.id}','${id}')">🗑️</button>
-          </div>
-        </div>
+    <div class="list-card">
+      <div class="list-card-header">
+        <span class="list-card-title">Notas</span>
+        <button class="list-action-add" onclick="openModalNewNote('${id}')">+ Adicionar</button>
       </div>
-    `).join('') : '<div class="empty"><div class="empty-icon">📝</div><div class="empty-text">Nenhuma nota cadastrada.</div></div>'}
+      <div style="padding:16px 20px">
+        ${notes.length ? notes.map(n => `
+          <div style="background:#FAFAFA;border:1px solid var(--border);border-radius:10px;padding:16px;margin-bottom:10px">
+            <div style="font-size:.85rem;color:var(--text);line-height:1.7;white-space:pre-wrap">${n.content}</div>
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-top:10px">
+              <div style="font-size:.72rem;color:var(--text3)">${n.createdAt ? new Date(n.createdAt).toLocaleString('pt-BR') : ''}</div>
+              <div style="display:flex;gap:4px">
+                <button class="icon-btn" onclick="openModalEditNote('${n.id}','${id}')">✏</button>
+                <button class="icon-btn del" onclick="deleteNote('${n.id}','${id}')">🗑</button>
+              </div>
+            </div>
+          </div>
+        `).join('') : '<div class="empty"><div class="empty-icon">📝</div><div class="empty-text">Nenhuma nota cadastrada.</div></div>'}
+      </div>
+    </div>
   `;
 }
 
 function renderTabContatos(id) {
   const contacts = state.contacts.filter(c => c.projectId === id);
   return `
-    <div style="display:flex;justify-content:flex-end;margin-bottom:12px">
-      <button class="btn btn-primary" onclick="openModalNewContact('${id}')">+ Novo Contato</button>
+    <div class="list-card">
+      <div class="list-card-header">
+        <span class="list-card-title">Contatos</span>
+        <button class="list-action-add" onclick="openModalNewContact('${id}')">+ Adicionar</button>
+      </div>
+      ${contacts.length ? `
+        <table class="task-table">
+          <thead><tr><th>Nome</th><th>Cargo</th><th>E-mail</th><th>Telefone</th><th>Ações</th></tr></thead>
+          <tbody>${contacts.map(c => `<tr>
+            <td>
+              <div style="display:flex;align-items:center;gap:10px">
+                <div class="consultant-avatar">${initials(c.name)}</div>
+                <span style="font-weight:600">${c.name}</span>
+              </div>
+            </td>
+            <td style="color:var(--text2);font-size:.82rem">${c.role||'—'}</td>
+            <td style="font-size:.82rem">${c.email ? `<a href="mailto:${c.email}" style="color:var(--blue)">${c.email}</a>` : '—'}</td>
+            <td style="font-size:.82rem">${c.phone||'—'}</td>
+            <td><div style="display:flex;gap:4px">
+              <button class="icon-btn" onclick="openModalEditContact('${c.id}','${id}')">✏</button>
+              <button class="icon-btn del" onclick="deleteContact('${c.id}','${id}')">🗑</button>
+            </div></td>
+          </tr>`).join('')}</tbody>
+        </table>` : '<div class="empty"><div class="empty-icon">👤</div><div class="empty-text">Nenhum contato cadastrado.</div></div>'}
     </div>
-    ${contacts.length ? `<div class="table-wrap"><table>
-      <thead><tr><th>Nome</th><th>Cargo</th><th>E-mail</th><th>Telefone</th><th>Ações</th></tr></thead>
-      <tbody>${contacts.map(c => `<tr>
-        <td style="font-weight:600">${c.name}</td>
-        <td style="font-size:.82rem;color:var(--text2)">${c.role||'—'}</td>
-        <td style="font-size:.82rem">${c.email||'—'}</td>
-        <td style="font-size:.82rem">${c.phone||'—'}</td>
-        <td><div class="action-cell">
-          <button class="btn btn-ghost btn-sm" onclick="openModalEditContact('${c.id}','${id}')">✏️</button>
-          <button class="btn btn-danger btn-sm" onclick="deleteContact('${c.id}','${id}')">🗑️</button>
-        </div></td>
-      </tr>`).join('')}</tbody>
-    </table></div>` : '<div class="empty"><div class="empty-icon">👤</div><div class="empty-text">Nenhum contato cadastrado.</div></div>'}
   `;
 }
 
 function renderTabOcorrencias(id) {
   const occs = state.occurrences.filter(o => o.projectId === id);
   return `
-    <div style="display:flex;justify-content:flex-end;margin-bottom:12px">
-      <button class="btn btn-primary" onclick="openModalNewOccurrence('${id}')">+ Nova Ocorrência</button>
+    <div class="list-card">
+      <div class="list-card-header">
+        <span class="list-card-title">Ocorrências</span>
+        <button class="list-action-add" onclick="openModalNewOccurrence('${id}')">+ Adicionar</button>
+      </div>
+      <div style="padding:0 20px">
+        ${occs.length ? occs.map(o => `
+          <div class="visit-item">
+            <div class="visit-dot" style="background:var(--orange)"></div>
+            <div>
+              <div class="visit-meta">
+                <span class="visit-date">${fmtDate(o.date)}</span>
+              </div>
+              <div style="font-size:.85rem;font-weight:600;color:var(--text);margin-top:2px">${o.title||'—'}</div>
+              ${o.description ? `<div class="visit-desc">${o.description}</div>` : ''}
+            </div>
+            <div style="display:flex;gap:4px;align-items:center">
+              <button class="icon-btn" onclick="openModalEditOccurrence('${o.id}','${id}')">✏</button>
+              <button class="icon-btn del" onclick="deleteOccurrence('${o.id}','${id}')">🗑</button>
+            </div>
+          </div>
+        `).join('') : '<div class="empty"><div class="empty-icon">⚠️</div><div class="empty-text">Nenhuma ocorrência registrada.</div></div>'}
+      </div>
     </div>
-    ${occs.length ? `<div class="table-wrap"><table>
-      <thead><tr><th>Data</th><th>Título</th><th>Descrição</th><th>Ações</th></tr></thead>
-      <tbody>${occs.map(o => `<tr>
-        <td style="font-size:.82rem">${fmtDate(o.date)}</td>
-        <td style="font-weight:600">${o.title||'—'}</td>
-        <td style="font-size:.82rem;max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${o.description||'—'}</td>
-        <td><div class="action-cell">
-          <button class="btn btn-ghost btn-sm" onclick="openModalEditOccurrence('${o.id}','${id}')">✏️</button>
-          <button class="btn btn-danger btn-sm" onclick="deleteOccurrence('${o.id}','${id}')">🗑️</button>
-        </div></td>
-      </tr>`).join('')}</tbody>
-    </table></div>` : '<div class="empty"><div class="empty-icon">⚠️</div><div class="empty-text">Nenhuma ocorrência registrada.</div></div>'}
   `;
 }
 
@@ -1110,11 +1142,11 @@ function renderTarefas() {
   if (tarefaSearch) tasks = tasks.filter(t => t.title.toLowerCase().includes(tarefaSearch.toLowerCase()));
   if (tarefaStatus !== 'all') tasks = tasks.filter(t => t.status === tarefaStatus);
   if (tarefaProject !== 'all') tasks = tasks.filter(t => t.projectId === tarefaProject);
-
+  const today = new Date().toISOString().split('T')[0];
   const projName = id => (state.projects.find(p => p.id === id) || {}).name || '—';
 
   document.getElementById('pageContent').innerHTML = `
-    <div class="filter-bar">
+    <div class="filter-bar" style="margin-bottom:16px">
       <input class="filter-input" placeholder="🔍 Buscar tarefa..." value="${tarefaSearch}" oninput="tarefaSearch=this.value;renderTarefas()">
       <select class="filter-select" onchange="tarefaStatus=this.value;renderTarefas()">
         <option value="all">Todos os status</option>
@@ -1127,26 +1159,34 @@ function renderTarefas() {
       </select>
       <button class="btn btn-primary" onclick="openModalNewTask(null)">+ Nova Tarefa</button>
     </div>
-    <div class="table-wrap">
-      <table>
-        <thead><tr><th>Título</th><th>Cliente</th><th>Responsável</th><th>Prazo</th><th>Status</th><th>Ações</th></tr></thead>
+    <div class="list-card">
+      <div class="list-card-header">
+        <span class="list-card-title">Lista de Tarefas (${tasks.length})</span>
+      </div>
+      <table class="task-table">
+        <thead><tr>
+          <th style="width:32px"></th>
+          <th>Tarefa</th><th>Cliente</th><th>Consultor(a)</th><th>Prazo</th><th>Status</th><th>Ações</th>
+        </tr></thead>
         <tbody>
           ${tasks.length ? tasks.map(t => {
-            const overdue = t.status !== 'completed' && t.deadline && t.deadline < new Date().toISOString().split('T')[0];
-            const effectiveStatus = overdue ? 'overdue' : t.status;
+            const overdue = t.status !== 'completed' && t.deadline && t.deadline < today;
             return `<tr>
-              <td><div style="font-weight:600">${t.title}</div>${t.description?`<div style="font-size:.75rem;color:var(--text2)">${t.description}</div>`:''}</td>
-              <td><span style="cursor:pointer;color:var(--text2);font-size:.82rem" onclick="openProject('${t.projectId}')">${projName(t.projectId)}</span></td>
-              <td style="font-size:.82rem;color:var(--text2)">${t.assignedTo||'—'}</td>
-              <td style="font-size:.82rem${overdue?' color:var(--red)':''}">${fmtDate(t.deadline)}</td>
-              <td>${statusBadge(effectiveStatus)}</td>
-              <td><div class="action-cell">
-                ${t.status!=='completed'?`<button class="btn btn-ghost btn-sm" onclick="completeTask('${t.id}',null)">✓</button>`:''}
-                <button class="btn btn-ghost btn-sm" onclick="openModalEditTask('${t.id}',null)">✏️</button>
-                <button class="btn btn-danger btn-sm" onclick="deleteTask('${t.id}',null)">🗑️</button>
+              <td><input type="checkbox" class="task-check" ${t.status==='completed'?'checked':''} onchange="completeTask('${t.id}',null)"></td>
+              <td>
+                <div class="task-name">${t.title}</div>
+                ${t.description?`<div style="font-size:.75rem;color:var(--text2);font-weight:400;text-transform:none;margin-top:2px">${t.description}</div>`:''}
+              </td>
+              <td><span style="cursor:pointer;color:var(--blue);font-size:.82rem;font-weight:500" onclick="openProject('${t.projectId}')">${projName(t.projectId)}</span></td>
+              <td><div class="consultant-avatar" title="${t.assignedTo||''}">${initials(t.assignedTo)}</div></td>
+              <td style="font-size:.82rem;${overdue?'color:var(--red);font-weight:600':''}">${fmtDate(t.deadline)}</td>
+              <td>${taskBadge(t)}</td>
+              <td><div style="display:flex;gap:4px">
+                <button class="icon-btn" onclick="openModalEditTask('${t.id}',null)">✏</button>
+                <button class="icon-btn del" onclick="deleteTask('${t.id}',null)">🗑</button>
               </div></td>
             </tr>`;
-          }).join('') : '<tr><td colspan="6"><div class="empty"><div class="empty-icon">✅</div><div class="empty-text">Nenhuma tarefa encontrada.</div></div></td></tr>'}
+          }).join('') : '<tr><td colspan="7"><div class="empty"><div class="empty-icon">✅</div><div class="empty-text">Nenhuma tarefa encontrada.</div></div></td></tr>'}
         </tbody>
       </table>
     </div>
