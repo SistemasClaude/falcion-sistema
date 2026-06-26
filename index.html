@@ -256,6 +256,11 @@ textarea.form-input{resize:vertical;min-height:80px}
 .gcal-connect-btn{display:flex;align-items:center;gap:8px;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:7px 14px;color:var(--text2);font-size:.82rem;cursor:pointer;transition:all .2s}
 .gcal-connect-btn:hover{border-color:var(--blue);color:var(--blue)}
 
+/* ── LOADING ── */
+.loading-overlay{position:fixed;inset:0;background:rgba(255,255,255,.8);z-index:200;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:12px}
+.spinner{width:36px;height:36px;border:3px solid var(--border);border-top-color:var(--blue);border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
 /* ── INFO BOX ── */
 .info-box{background:var(--blue-bg);border:1px solid var(--blue-light);border-radius:10px;padding:10px 16px;font-size:.8rem;color:var(--blue);margin-bottom:18px}
 
@@ -327,6 +332,12 @@ textarea.form-input{resize:vertical;min-height:80px}
     </header>
     <div class="page-content" id="pageContent"></div>
   </main>
+</div>
+
+<!-- ══ LOADING ══ -->
+<div class="loading-overlay" id="loadingOverlay" style="display:none">
+  <div class="spinner"></div>
+  <div style="font-size:.85rem;color:var(--text2);font-weight:500">Carregando...</div>
 </div>
 
 <!-- ══ MODALS ══ -->
@@ -698,11 +709,12 @@ function logout() {
 async function initApp() {
   document.getElementById('loginPage').style.display = 'none';
   document.getElementById('app').style.display = 'flex';
-  // topbar
+  document.getElementById('loadingOverlay').style.display = 'flex';
   document.getElementById('userAvatar').textContent = avatar(state.currentUser.name);
   document.getElementById('userName').textContent = state.currentUser.name;
   document.getElementById('dateBadge').textContent = dateStr();
   await loadAll();
+  document.getElementById('loadingOverlay').style.display = 'none';
   renderSidebarClients();
   document.getElementById('notifCount').textContent = pendingTasks();
   navigate('dashboard');
@@ -1380,6 +1392,7 @@ function openModalNewProject() {
   openModal(`
     <div class="modal-title">Novo Cliente</div>
     <div class="form-group"><div class="form-label">Nome *</div><input class="form-input" id="f_name" placeholder="Nome do cliente"></div>
+    <div class="form-group"><div class="form-label">URL da Imagem (banner)</div><input class="form-input" id="f_img" placeholder="https://..."></div>
     <div class="form-row">
       <div class="form-group"><div class="form-label">Cota Mensal (horas)</div><input class="form-input" id="f_quota" type="number" step="0.5" value="0"></div>
       <div class="form-group"><div class="form-label">Horas Iniciais</div><input class="form-input" id="f_initial" type="number" step="0.5" value="0"></div>
@@ -1402,6 +1415,7 @@ async function saveNewProject() {
   try {
     const raw = await api.createProject({
       name,
+      image_url: document.getElementById('f_img').value.trim() || null,
       monthly_quota_hours: parseFloat(document.getElementById('f_quota').value) || 0,
       initial_hours: parseFloat(document.getElementById('f_initial').value) || 0,
       status: document.getElementById('f_status').value
@@ -1420,6 +1434,7 @@ function openModalEditProject(id) {
   openModal(`
     <div class="modal-title">Editar Cliente</div>
     <div class="form-group"><div class="form-label">Nome *</div><input class="form-input" id="f_name" value="${p.name}"></div>
+    <div class="form-group"><div class="form-label">URL da Imagem (banner)</div><input class="form-input" id="f_img" value="${p.imageUrl||''}" placeholder="https://..."></div>
     <div class="form-row">
       <div class="form-group"><div class="form-label">Cota Mensal (horas)</div><input class="form-input" id="f_quota" type="number" step="0.5" value="${p.monthlyQuotaHours}"></div>
       <div class="form-group"><div class="form-label">Horas Iniciais</div><input class="form-input" id="f_initial" type="number" step="0.5" value="${p.initialHours}"></div>
@@ -1444,6 +1459,7 @@ async function saveEditProject(id) {
   try {
     const raw = await api.updateProject(id, {
       name,
+      image_url: document.getElementById('f_img').value.trim() || null,
       monthly_quota_hours: parseFloat(document.getElementById('f_quota').value) || 0,
       initial_hours: parseFloat(document.getElementById('f_initial').value) || 0,
       status: document.getElementById('f_status').value
