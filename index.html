@@ -707,17 +707,31 @@ function logout() {
 }
 
 async function initApp() {
-  document.getElementById('loginPage').style.display = 'none';
-  document.getElementById('app').style.display = 'flex';
-  document.getElementById('loadingOverlay').style.display = 'flex';
-  document.getElementById('userAvatar').textContent = avatar(state.currentUser.name);
-  document.getElementById('userName').textContent = state.currentUser.name;
-  document.getElementById('dateBadge').textContent = dateStr();
-  await loadAll();
-  document.getElementById('loadingOverlay').style.display = 'none';
-  renderSidebarClients();
-  document.getElementById('notifCount').textContent = pendingTasks();
-  navigate('dashboard');
+  try {
+    document.getElementById('loginPage').style.display = 'none';
+    document.getElementById('app').style.display = 'flex';
+    document.getElementById('loadingOverlay').style.display = 'flex';
+    document.getElementById('userAvatar').textContent = avatar(state.currentUser?.name || '');
+    document.getElementById('userName').textContent = state.currentUser?.name || '';
+    document.getElementById('dateBadge').textContent = dateStr();
+    // Timeout de segurança — se travar por mais de 15s, limpa e volta ao login
+    const timeout = setTimeout(() => {
+      document.getElementById('loadingOverlay').style.display = 'none';
+      logout();
+      alert('Erro ao carregar dados. Faça login novamente.');
+    }, 15000);
+    await loadAll();
+    clearTimeout(timeout);
+    document.getElementById('loadingOverlay').style.display = 'none';
+    renderSidebarClients();
+    document.getElementById('notifCount').textContent = pendingTasks();
+    navigate('dashboard');
+  } catch(e) {
+    document.getElementById('loadingOverlay').style.display = 'none';
+    console.error('initApp error:', e);
+    logout();
+    alert('Erro ao iniciar o sistema: ' + e.message + '\nFaça login novamente.');
+  }
 }
 
 // ── SIDEBAR CLIENTS ──
