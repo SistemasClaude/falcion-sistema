@@ -401,6 +401,156 @@ function calcSaldo(project) {
   return total - used;
 }
 
+function calcSaldoMensal(project, year, month) {
+  // Saldo no início do mês = horas acumuladas até o mês anterior - visitas antes do mês
+  const created = new Date(project.createdAt);
+  const createdYear = created.getUTCFullYear();
+  const createdMonth = created.getUTCMonth();
+
+  // Meses até o início do mês (exclusive)
+  const monthsBefore = Math.max(0, (year - createdYear) * 12 + (month - createdMonth));
+  const totalBefore = project.initialHours + monthsBefore * project.monthlyQuotaHours;
+
+  const firstOfMonth = `${year}-${String(month + 1).padStart(2,'0')}-01`;
+  const visitasAntes = state.visits
+    .filter(v => v.projectId === project.id && v.date < firstOfMonth)
+    .reduce((acc, v) => acc + parseDuration(v.duration), 0);
+
+  const saldoInicial = totalBefore - visitasAntes;
+
+  // Visitas do mês
+  const mesStr = `${year}-${String(month + 1).padStart(2,'0')}`;
+  const visitasMes = state.visits
+    .filter(v => v.projectId === project.id && v.date && v.date.startsWith(mesStr))
+    .sort((a, b) => a.date.localeCompare(b.date));
+
+  const horasGastas = visitasMes.reduce((acc, v) => acc + parseDuration(v.duration), 0);
+  const saldoFinal = saldoInicial - horasGastas;
+
+  return { saldoInicial, visitasMes, horasGastas, saldoFinal };
+}
+
+function gerarRelatorioMensal(projectId) {
+  const p = state.projects.find(x => x.id === projectId);
+  if (!p) return;
+
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = now.getMonth();
+  const { saldoInicial, visitasMes, horasGastas, saldoFinal } = calcSaldoMensal(p, year, month);
+
+  const meses = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+  const mesNome = `${meses[month]} / ${year}`;
+
+  const fmtH = h => {
+    const hh = Math.floor(Math.abs(h));
+    const mm = Math.round((Math.abs(h) - hh) * 60);
+    return `${h < 0 ? '-' : ''}${String(hh).padStart(2,'0')}h${String(mm).padStart(2,'0')}`;
+  };
+
+  const linhasVisitas = visitasMes.length === 0
+    ? `<tr><td colspan="4" style="text-align:center;color:#9CA3AF;padding:20px">Nenhuma visita registrada neste mês</td></tr>`
+    : visitasMes.map(v => {
+        const d = new Date(v.date + 'T00:00:00');
+        const dataFmt = d.toLocaleDateString('pt-BR');
+        return `<tr>
+          <td>${dataFmt}</td>
+          <td>${v.assignedTo || '—'}</td>
+          <td style="max-width:300px">${v.description || '—'}</td>
+          <td style="text-align:center;font-weight:700;color:#1D4ED8">${v.duration}</td>
+        </tr>`;
+      }).join('');
+
+  const html = `<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"/>
+<title>Relatório ${p.name} — ${mesNome}</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:Arial,sans-serif;color:#1A2F4A;background:#fff;padding:40px;font-size:13px}
+  .header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:32px;padding-bottom:16px;border-bottom:3px solid #C9A84C}
+  .header-left h1{font-size:22px;color:#1A2F4A;margin-bottom:2px}
+  .header-left p{color:#C9A84C;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px}
+  .header-right{text-align:right}
+  .header-right .mes{font-size:15px;font-weight:700;color:#1A2F4A}
+  .header-right .cliente{font-size:11px;color:#6B7280}
+  .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:28px}
+  .kpi{background:#F0F4F8;border-radius:10px;padding:14px 16px;text-align:center}
+  .kpi-label{font-size:10px;color:#6B7280;text-transform:uppercase;letter-spacing:.8px;margin-bottom:4px;font-weight:600}
+  .kpi-value{font-size:20px;font-weight:800;color:#1A2F4A}
+  .kpi-value.neg{color:#DC2626}
+  .kpi-value.green{color:#16A34A}
+  .kpi.destaque{background:#1A2F4A}
+  .kpi.destaque .kpi-label{color:#C9A84C}
+  .kpi.destaque .kpi-value{color:#fff}
+  h2{font-size:13px;font-weight:700;color:#1A2F4A;text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;padding-left:8px;border-left:3px solid #C9A84C}
+  table{width:100%;border-collapse:collapse;font-size:12px}
+  th{background:#1A2F4A;color:#fff;padding:8px 12px;text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.5px}
+  td{padding:9px 12px;border-bottom:1px solid #E5E7EB}
+  tr:nth-child(even) td{background:#F9FAFB}
+  .footer{margin-top:32px;padding-top:12px;border-top:1px solid #E5E7EB;display:flex;justify-content:space-between;font-size:10px;color:#9CA3AF}
+  @media print{body{padding:20px}.kpis{break-inside:avoid}table{break-inside:auto}tr{break-inside:avoid}}
+</style>
+</head>
+<body>
+<div class="header">
+  <div class="header-left">
+    <h1>Falcioni Consultoria</h1>
+    <p>Relatório Mensal de Horas</p>
+  </div>
+  <div class="header-right">
+    <div class="mes">${mesNome}</div>
+    <div class="cliente">${p.name}</div>
+  </div>
+</div>
+
+<div class="kpis">
+  <div class="kpi">
+    <div class="kpi-label">Saldo Inicial do Mês</div>
+    <div class="kpi-value">${fmtH(saldoInicial)}</div>
+  </div>
+  <div class="kpi">
+    <div class="kpi-label">Visitas Realizadas</div>
+    <div class="kpi-value">${visitasMes.length}</div>
+  </div>
+  <div class="kpi">
+    <div class="kpi-label">Horas Consumidas</div>
+    <div class="kpi-value neg">${fmtH(horasGastas)}</div>
+  </div>
+  <div class="kpi destaque">
+    <div class="kpi-label">Saldo Final</div>
+    <div class="kpi-value ${saldoFinal < 0 ? 'neg' : ''}">${fmtH(saldoFinal)}</div>
+  </div>
+</div>
+
+<h2>Registro de Visitas — ${mesNome}</h2>
+<table>
+  <thead>
+    <tr>
+      <th>Data</th>
+      <th>Consultora</th>
+      <th>Descrição</th>
+      <th style="text-align:center">Horas</th>
+    </tr>
+  </thead>
+  <tbody>${linhasVisitas}</tbody>
+</table>
+
+<div class="footer">
+  <span>Falcioni Consultoria — Documento gerado em ${new Date().toLocaleDateString('pt-BR')} às ${new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}</span>
+  <span>${p.name} — ${mesNome}</span>
+</div>
+
+<script>window.onload = () => { window.print(); }<\/script>
+</body>
+</html>`;
+
+  const w = window.open('', '_blank');
+  w.document.write(html);
+  w.document.close();
+}
+
 function calcTotalSaldo() {
   return state.projects
     .filter(p => p.status === 'ATIVO')
@@ -916,9 +1066,12 @@ function renderDetail(id) {
         <div class="detail-client-name">${p.name}</div>
         <span class="detail-status-badge">${p.status}</span>
       </div>
-      <div class="detail-topbar-right">
-        <div class="detail-credit-label">Crédito Total &nbsp;&nbsp;&nbsp; Total</div>
-        <div class="detail-credit-value ${saldo<0?'saldo-neg':''}">${fmt(saldo)} h</div>
+      <div class="detail-topbar-right" style="display:flex;align-items:center;gap:16px">
+        <button onclick="gerarRelatorioMensal('${id}')" style="background:var(--blue);color:#fff;border:none;border-radius:8px;padding:8px 14px;font-size:.8rem;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px">📄 Relatório do Mês</button>
+        <div>
+          <div class="detail-credit-label">Crédito Total &nbsp;&nbsp;&nbsp; Total</div>
+          <div class="detail-credit-value ${saldo<0?'saldo-neg':''}">${fmt(saldo)} h</div>
+        </div>
       </div>
     </div>
     <div class="tabs" id="detailTabs">
