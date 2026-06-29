@@ -675,7 +675,15 @@ async function initLogin() {
   }
   let profiles = await api.getProfiles().catch(() => []);
   // Remove perfis indesejados
-  profiles = profiles.filter(p => p.email !== 'alanmoreiralima19@gmail.com');
+  // Exibir apenas os perfis autorizados
+  const emailsAutorizados = [
+    'falcioniconsultoria1@gmail.com',   // Lívia
+    'falcioniconsultoria2@gmail.com',   // Maria Eduarda
+    'marilia@falcioniconsultoria.com.br', // Marília
+    'administrativo@falcioniconsultoria.com.br', // Déborah
+    'consultoriacomercialfalcioni@gmail.com', // Paloma
+  ];
+  profiles = profiles.filter(p => emailsAutorizados.includes(p.email));
   window._loginProfiles = profiles;
   const grid = document.getElementById('profileGrid');
   if (!profiles.length) {
@@ -1361,11 +1369,28 @@ function initGoogleAuth() {
 
 async function loadGoogleCalendarEvents(token) {
   const today = new Date().toISOString();
-  const url = `https://www.googleapis.com/calendar/v3/calendars/primary/events?timeMin=${today}&maxResults=20&singleEvents=true&orderBy=startTime&access_token=${token}`;
+  const isDeborah = state.currentUser?.email === 'administrativo@falcioniconsultoria.com.br';
   try {
-    const res = await fetch(url);
-    const data = await res.json();
-    gcalEvents = data.items || [];
+    if (isDeborah) {
+      // Gestora: busca todos os calendários e une eventos
+      const listRes = await fetch(`https://www.googleapis.com/calendar/v3/users/me/calendarList?access_token=${token}`);
+      const listData = await listRes.json();
+      const cals = (listData.items || []).filter(c => c.accessRole !== 'freeBusyReader');
+      const allEvents = await Promise.all(cals.map(async cal => {
+        const r = await fetch(`https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(cal.id)}/events?timeMin=${today}&maxResults=10&singleEvents=true&orderBy=startTime&access_token=${token}`);
+        const d = await r.json();
+        return (d.items || []).map(ev => ({ ...ev, _calName: cal.summary, _calColor: cal.backgroundColor || '#4285F4' }));
+      }));
+      gcalEvents = allEvents.flat().sort((a, b) => {
+        const da = a.start?.dateTime || a.start?.date || '';
+        const db = b.start?.dateTime || b.start?.date || '';
+        return da.localeCompare(db);
+      });
+    } else {
+      const res = await fetch(`https://www.googleapis.com/calendar/v3/calendars/primary/events?timeMin=${today}&maxResults=20&singleEvents=true&orderBy=startTime&access_token=${token}`);
+      const data = await res.json();
+      gcalEvents = data.items || [];
+    }
     renderGcalEvents();
   } catch (e) {
     document.getElementById('gcalEvents').innerHTML = '<div style="color:var(--red)">Erro ao carregar eventos do Google.</div>';
