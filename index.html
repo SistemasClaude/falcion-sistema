@@ -1423,7 +1423,7 @@ function renderAgenda() {
     if (calendarInstance) calendarInstance.destroy();
     calendarInstance = new FullCalendar.Calendar(document.getElementById('calendar'), {
       locale: 'pt-br',
-      initialView: 'dayGridMonth',
+      initialView: 'timeGridWeek',
       headerToolbar: { left: 'prev,next today', center: 'title', right: 'dayGridMonth,timeGridWeek,listWeek' },
       events: getCalendarEvents(),
       eventClick: handleEventClick,
