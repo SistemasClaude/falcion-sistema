@@ -1387,35 +1387,21 @@ function renderTarefas() {
 }
 
 // ── AGENDA ──
-let calFilters = { tasks: true, visits: true, occurrences: true, custom: true };
-let agendaProjectFilter = 'all';
+const GOOGLE_CLIENT_ID = '271195047448-vhucujug61c404leuhafkd6ub731rqa1.apps.googleusercontent.com';
+const GCAL_SCOPE = 'https://www.googleapis.com/auth/calendar.readonly';
+let gcalTokenClient = null;
+let gcalAccessToken = null;  // token salvo em memória — não perde ao trocar de aba
 
 function renderAgenda() {
   document.getElementById('pageContent').innerHTML = `
-    <div class="agenda-filters">
-      <button class="toggle-btn ${calFilters.tasks?'on':''}" onclick="toggleFilter('tasks')">✅ Tarefas</button>
-      <button class="toggle-btn ${calFilters.visits?'on':''}" onclick="toggleFilter('visits')">🕐 Visitas</button>
-      <button class="toggle-btn ${calFilters.occurrences?'on':''}" onclick="toggleFilter('occurrences')">⚠️ Ocorrências</button>
-      <button class="toggle-btn ${calFilters.custom?'on':''}" onclick="toggleFilter('custom')">📅 Compromissos</button>
-      <select class="filter-select" onchange="agendaProjectFilter=this.value;refreshCalendar()">
-        <option value="all">Todos os clientes</option>
-        ${state.projects.map(p=>`<option value="${p.id}">${p.name}</option>`).join('')}
-      </select>
-      <button class="btn btn-primary" onclick="openModalNewCustomEvent()">+ Compromisso</button>
-    </div>
-
-    <!-- Google Calendar Section -->
-    <div class="gcal-section" id="gcalSection">
-      <div class="gcal-header">
-        <div class="gcal-title">📅 Google Agenda</div>
-        <button class="gcal-connect-btn" onclick="connectGoogleCalendar()" id="gcalBtn">
-          <svg width="16" height="16" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
-          Conectar Google Agenda
-        </button>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px">
+      <div style="font-size:.85rem;color:var(--text2)" id="gcalStatus">
+        ${gcalAccessToken ? '✓ Google Agenda conectada' : 'Agenda não conectada'}
       </div>
-      <div id="gcalEvents" style="color:var(--text2);font-size:.82rem">Conecte sua conta Google para ver os eventos aqui.</div>
+      <button class="gcal-connect-btn" onclick="connectGoogleCalendar()" id="gcalBtn" style="${gcalAccessToken?'color:var(--green)':''}">
+        ${gcalAccessToken ? '🔄 Atualizar agenda' : `<svg width="16" height="16" viewBox="0 0 24 24" style="vertical-align:middle;margin-right:6px"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>Conectar Google Agenda`}
+      </button>
     </div>
-
     <div id="calendar"></div>
   `;
 
@@ -1425,80 +1411,46 @@ function renderAgenda() {
       locale: 'pt-br',
       initialView: 'timeGridWeek',
       headerToolbar: { left: 'prev,next today', center: 'title', right: 'dayGridMonth,timeGridWeek,listWeek' },
-      events: getCalendarEvents(),
-      eventClick: handleEventClick,
-      dateClick: handleDateClick,
-      height: 600
+      events: gcalToFullCalendarEvents(),
+      eventClick: (info) => {
+        const ev = info.event;
+        openModal(`<div class="modal-title">${ev.title}</div><div style="color:var(--text2);font-size:.9rem;line-height:1.7">
+          Início: ${ev.start ? new Date(ev.start).toLocaleString('pt-BR') : '—'}<br>
+          ${ev.end ? 'Fim: ' + new Date(ev.end).toLocaleString('pt-BR') + '<br>' : ''}
+          ${ev.extendedProps.location ? 'Local: ' + ev.extendedProps.location + '<br>' : ''}
+          ${ev.extendedProps.description ? ev.extendedProps.description : ''}
+        </div><div class="form-actions"><button class="btn btn-ghost" onclick="closeModal()">Fechar</button></div>`);
+      },
+      height: 700,
+      slotMinTime: '07:00:00',
+      slotMaxTime: '22:00:00',
+      allDayText: 'Dia todo',
+      noEventsText: gcalAccessToken ? 'Nenhum evento nesta semana' : 'Conecte a Google Agenda para ver seus eventos aqui'
     });
     calendarInstance.render();
-    if (gcalEvents.length) renderGcalEvents();
+    // se já tem token, recarrega eventos automaticamente sem pedir login
+    if (gcalAccessToken) loadGoogleCalendarEvents(gcalAccessToken);
   }, 100);
 }
 
-function getCalendarEvents() {
-  const events = [];
-  const filterProject = p => agendaProjectFilter === 'all' || p === agendaProjectFilter;
-
-  if (calFilters.tasks) {
-    state.tasks.filter(t => t.deadline && filterProject(t.projectId)).forEach(t => {
-      const proj = state.projects.find(p => p.id === t.projectId);
-      events.push({ id: 'task-' + t.id, title: '✅ ' + t.title, start: t.deadline, backgroundColor: '#16a34a', borderColor: '#16a34a', extendedProps: { type: 'task', data: t, projName: proj?.name || '' } });
-    });
-  }
-  if (calFilters.visits) {
-    state.visits.filter(v => v.date && filterProject(v.projectId)).forEach(v => {
-      const proj = state.projects.find(p => p.id === v.projectId);
-      events.push({ id: 'visit-' + v.id, title: '🕐 ' + (proj?.name || 'Visita'), start: v.date, backgroundColor: '#f59e0b', borderColor: '#f59e0b', extendedProps: { type: 'visit', data: v, projName: proj?.name || '' } });
-    });
-  }
-  if (calFilters.occurrences) {
-    state.occurrences.filter(o => o.date && filterProject(o.projectId)).forEach(o => {
-      const proj = state.projects.find(p => p.id === o.projectId);
-      events.push({ id: 'occ-' + o.id, title: '⚠️ ' + (o.title || o.description || 'Ocorrência'), start: o.date, backgroundColor: '#dc2626', borderColor: '#dc2626', extendedProps: { type: 'occurrence', data: o, projName: proj?.name || '' } });
-    });
-  }
-  if (calFilters.custom) {
-    state.customEvents.filter(e => filterProject(e.projectId)).forEach(e => {
-      events.push({ id: 'custom-' + e.id, title: '📅 ' + e.title, start: e.start, end: e.end, backgroundColor: '#3b82f6', borderColor: '#3b82f6', extendedProps: { type: 'custom', data: e } });
-    });
-  }
-  return events;
+function gcalToFullCalendarEvents() {
+  return (window._gcalRawEvents || []).map((ev, i) => {
+    const color = ev._calColor || ['#4285F4','#34A853','#FBBC05','#EA4335','#7B1FA2'][i % 5];
+    return {
+      id: ev.id,
+      title: (ev._calName ? `[${ev._calName}] ` : '') + (ev.summary || '(sem título)'),
+      start: ev.start?.dateTime || ev.start?.date,
+      end: ev.end?.dateTime || ev.end?.date,
+      backgroundColor: color,
+      borderColor: color,
+      allDay: !ev.start?.dateTime,
+      extendedProps: { location: ev.location || '', description: ev.description || '' }
+    };
+  });
 }
-
-function toggleFilter(key) {
-  calFilters[key] = !calFilters[key];
-  renderAgenda();
-}
-
-function refreshCalendar() {
-  if (!calendarInstance) return;
-  calendarInstance.removeAllEvents();
-  calendarInstance.addEventSource(getCalendarEvents());
-}
-
-function handleEventClick(info) {
-  const { type, data, projName } = info.event.extendedProps;
-  let html = '';
-  if (type === 'task') html = `<b>${data.title}</b><br>Cliente: ${projName}<br>Prazo: ${fmtDate(data.deadline)}<br>Status: ${data.status}`;
-  else if (type === 'visit') html = `<b>Visita — ${projName}</b><br>Data: ${fmtDate(data.date)}<br>Duração: ${data.duration}<br>${data.description||''}`;
-  else if (type === 'occurrence') html = `<b>${data.title||'Ocorrência'}</b><br>Cliente: ${projName}<br>Data: ${fmtDate(data.date)}<br>${data.description||''}`;
-  else if (type === 'custom') html = `<b>${data.title}</b><br>Início: ${data.start}<br>Fim: ${data.end||''}`;
-  openModal(`<div class="modal-title">Detalhes do Evento</div><div style="color:var(--text2);font-size:.9rem;line-height:1.7">${html}</div><div class="form-actions"><button class="btn btn-ghost" onclick="closeModal()">Fechar</button>${type==='custom'?`<button class="btn btn-danger" onclick="deleteCustomEvent('${data.id}');closeModal()">Excluir</button>`:''}</div>`);
-}
-
-function handleDateClick(info) {
-  openModalNewCustomEvent(info.dateStr);
-}
-
-// ── GOOGLE CALENDAR ──
-const GOOGLE_CLIENT_ID = '271195047448-vhucujug61c404leuhafkd6ub731rqa1.apps.googleusercontent.com';
-const GCAL_SCOPE = 'https://www.googleapis.com/auth/calendar.readonly';
-let gcalTokenClient = null;
-let gcalEvents = [];
 
 function connectGoogleCalendar() {
-  if (!window.google || !window.google.accounts) {
-    // Carrega o script da Google Identity Services se não estiver carregado
+  if (!window.google?.accounts) {
     const script = document.createElement('script');
     script.src = 'https://accounts.google.com/gsi/client';
     script.onload = () => initGoogleAuth();
@@ -1509,71 +1461,52 @@ function connectGoogleCalendar() {
 }
 
 function initGoogleAuth() {
-  if (!window.google || GOOGLE_CLIENT_ID === 'SEU_CLIENT_ID_AQUI.apps.googleusercontent.com') {
-    document.getElementById('gcalEvents').innerHTML = `
-      <div style="color:var(--orange);font-size:.82rem">⚠️ Configure o Client ID do Google para ativar esta funcionalidade.<br>
-      <a href="https://console.cloud.google.com/apis/credentials" target="_blank" style="color:var(--gold)">Gerar credencial no Google Cloud Console</a></div>`;
-    return;
-  }
   gcalTokenClient = google.accounts.oauth2.initTokenClient({
     client_id: GOOGLE_CLIENT_ID,
     scope: GCAL_SCOPE,
     callback: async (response) => {
       if (response.error) return;
-      await loadGoogleCalendarEvents(response.access_token);
+      gcalAccessToken = response.access_token;
+      await loadGoogleCalendarEvents(gcalAccessToken);
     }
   });
   gcalTokenClient.requestAccessToken();
 }
 
 async function loadGoogleCalendarEvents(token) {
-  const today = new Date().toISOString();
+  const timeMin = new Date(Date.now() - 7 * 864e5).toISOString();
+  const timeMax = new Date(Date.now() + 90 * 864e5).toISOString();
   const isDeborah = state.currentUser?.email === 'administrativo@falcioniconsultoria.com.br';
   try {
     if (isDeborah) {
-      // Gestora: busca todos os calendários e une eventos
       const listRes = await fetch(`https://www.googleapis.com/calendar/v3/users/me/calendarList?access_token=${token}`);
       const listData = await listRes.json();
+      if (listData.error) { gcalAccessToken = null; return; }
       const cals = (listData.items || []).filter(c => c.accessRole !== 'freeBusyReader');
       const allEvents = await Promise.all(cals.map(async cal => {
-        const r = await fetch(`https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(cal.id)}/events?timeMin=${today}&maxResults=10&singleEvents=true&orderBy=startTime&access_token=${token}`);
+        const r = await fetch(`https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(cal.id)}/events?timeMin=${timeMin}&timeMax=${timeMax}&maxResults=100&singleEvents=true&orderBy=startTime&access_token=${token}`);
         const d = await r.json();
         return (d.items || []).map(ev => ({ ...ev, _calName: cal.summary, _calColor: cal.backgroundColor || '#4285F4' }));
       }));
-      gcalEvents = allEvents.flat().sort((a, b) => {
-        const da = a.start?.dateTime || a.start?.date || '';
-        const db = b.start?.dateTime || b.start?.date || '';
-        return da.localeCompare(db);
-      });
+      window._gcalRawEvents = allEvents.flat();
     } else {
-      const res = await fetch(`https://www.googleapis.com/calendar/v3/calendars/primary/events?timeMin=${today}&maxResults=20&singleEvents=true&orderBy=startTime&access_token=${token}`);
+      const res = await fetch(`https://www.googleapis.com/calendar/v3/calendars/primary/events?timeMin=${timeMin}&timeMax=${timeMax}&maxResults=100&singleEvents=true&orderBy=startTime&access_token=${token}`);
       const data = await res.json();
-      gcalEvents = data.items || [];
+      if (data.error) { gcalAccessToken = null; return; }
+      window._gcalRawEvents = data.items || [];
     }
-    renderGcalEvents();
+    // atualiza o FullCalendar com os eventos do Google
+    if (calendarInstance) {
+      calendarInstance.removeAllEvents();
+      calendarInstance.addEventSource(gcalToFullCalendarEvents());
+    }
+    const btn = document.getElementById('gcalBtn');
+    const status = document.getElementById('gcalStatus');
+    if (btn) { btn.textContent = '🔄 Atualizar agenda'; btn.style.color = 'var(--green)'; }
+    if (status) { status.textContent = '✓ Google Agenda conectada'; status.style.color = 'var(--green)'; }
   } catch (e) {
-    document.getElementById('gcalEvents').innerHTML = '<div style="color:var(--red)">Erro ao carregar eventos do Google.</div>';
+    console.error('Erro Google Calendar:', e);
   }
-}
-
-function renderGcalEvents() {
-  const el = document.getElementById('gcalEvents');
-  if (!el) return;
-  if (!gcalEvents.length) { el.innerHTML = '<div style="color:var(--text2)">Nenhum evento próximo encontrado.</div>'; return; }
-  document.getElementById('gcalBtn').innerHTML = '✓ Google Agenda conectada';
-  document.getElementById('gcalBtn').style.color = 'var(--green)';
-  const colors = ['#4285F4','#34A853','#FBBC05','#EA4335','#7B1FA2'];
-  el.innerHTML = gcalEvents.slice(0, 10).map((ev, i) => {
-    const start = ev.start?.dateTime || ev.start?.date || '';
-    const time = start ? new Date(start).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) : '';
-    return `<div class="gcal-event">
-      <div class="gcal-dot" style="background:${colors[i%colors.length]}"></div>
-      <div class="gcal-info">
-        <div class="gcal-evname">${ev.summary||'(sem título)'}</div>
-        <div class="gcal-evtime">${time}</div>
-      </div>
-    </div>`;
-  }).join('');
 }
 
 // ── MODALS ──
