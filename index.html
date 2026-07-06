@@ -605,9 +605,9 @@ function statusBadge(s) {
   const map = {
     'ATIVO': 'badge-green', 'INATIVO': 'badge-red',
     'PAUSADO': 'badge-orange', 'completed': 'badge-green',
-    'pending': 'badge-orange', 'overdue': 'badge-red'
+    'todo': 'badge-orange', 'overdue': 'badge-red'
   };
-  const labels = { 'pending': 'Pendente', 'completed': 'Concluída', 'overdue': 'Atrasada' };
+  const labels = { 'todo': 'Pendente', 'completed': 'Concluída', 'overdue': 'Atrasada' };
   return `<span class="badge ${map[s] || 'badge-blue'}">${labels[s] || s}</span>`;
 }
 
@@ -770,7 +770,7 @@ function mapTask(r) {
     assignedTo: r.assigned_to || '',
     deadline: r.deadline || '',
     estimatedTime: r.estimated_time || '',
-    status: r.status || 'pending',
+    status: r.status || 'todo',
     createdAt: r.created_at
   };
 }
@@ -1189,7 +1189,7 @@ function renderTabTarefas(id) {
         <div class="filter-group-label">Status</div>
         <select class="filter-select" id="tf_status" onchange="renderTab('${id}')">
           <option value="">Todos</option>
-          <option value="pending">Pendente</option>
+          <option value="todo">Pendente</option>
           <option value="completed">Concluída</option>
         </select>
       </div>
@@ -1401,7 +1401,7 @@ function renderTarefas() {
       <input class="filter-input" placeholder="🔍 Buscar tarefa..." value="${tarefaSearch}" oninput="tarefaSearch=this.value;renderTarefas()">
       <select class="filter-select" onchange="tarefaStatus=this.value;renderTarefas()">
         <option value="all">Todos os status</option>
-        <option value="pending" ${tarefaStatus==='pending'?'selected':''}>Pendentes</option>
+        <option value="todo" ${tarefaStatus==='todo'?'selected':''}>Pendentes</option>
         <option value="completed" ${tarefaStatus==='completed'?'selected':''}>Concluídas</option>
       </select>
       <select class="filter-select" onchange="tarefaProject=this.value;renderTarefas()">
@@ -1884,7 +1884,7 @@ async function saveNewTask(projectId) {
       project_id: pid,
       assigned_to: document.getElementById('f_assigned').value,
       deadline: document.getElementById('f_deadline').value || null,
-      status: 'pending'
+      status: 'todo'
     });
     state.tasks.unshift(mapTask(raw));
     updateNotifBadge();
@@ -1907,7 +1907,7 @@ function openModalEditTask(id, projectId) {
     </div>
     <div class="form-group"><div class="form-label">Status</div>
       <select class="form-input" id="f_status">
-        <option value="pending" ${t.status==='pending'?'selected':''}>Pendente</option>
+        <option value="todo" ${t.status==='todo'?'selected':''}>Pendente</option>
         <option value="completed" ${t.status==='completed'?'selected':''}>Concluída</option>
       </select>
     </div>
@@ -1940,7 +1940,7 @@ async function saveEditTask(id, projectId) {
 async function completeTask(id, projectId) {
   try {
     const task = state.tasks.find(t => t.id === id);
-    const newStatus = task?.status === 'completed' ? 'pending' : 'completed';
+    const newStatus = task?.status === 'completed' ? 'todo' : 'completed';
     const raw = await api.updateTask(id, { status: newStatus });
     const idx = state.tasks.findIndex(t => t.id === id);
     if (idx >= 0) state.tasks[idx] = mapTask(raw);
