@@ -242,6 +242,11 @@ textarea.form-input{resize:vertical;min-height:80px}
 .empty-icon{font-size:2.5rem;margin-bottom:12px}
 .empty-text{font-size:.88rem}
 
+/* ── CRONOGRAMA ── */
+.crono-row{display:grid;grid-template-columns:180px 1fr;border-bottom:1px solid var(--border);min-height:44px}
+.crono-label{padding:10px 16px;font-size:.78rem;font-weight:600;color:var(--text);border-right:1px solid var(--border);display:flex;flex-direction:column;justify-content:center}
+.crono-bar-area{position:relative;padding:0 12px;display:flex;align-items:center}
+
 /* ── AGENDA ── */
 .agenda-filters{display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;align-items:center}
 .toggle-btn{padding:6px 14px;border-radius:20px;font-size:.78rem;font-weight:600;cursor:pointer;border:1px solid var(--border);background:var(--white);color:var(--text2);transition:all .2s}
@@ -316,6 +321,9 @@ textarea.form-input{resize:vertical;min-height:80px}
       <div class="menu-item" onclick="navigate('agenda')" id="nav-agenda">
         <span class="menu-icon">📅</span> Agenda
       </div>
+      <div class="menu-item" onclick="navigate('cronograma')" id="nav-cronograma">
+        <span class="menu-icon">📋</span> Cronograma
+      </div>
     </nav>
     <div class="sidebar-menu">
       <div class="menu-label">Clientes Ativos</div>
@@ -338,7 +346,7 @@ textarea.form-input{resize:vertical;min-height:80px}
       <div class="page-title" id="pageTitle">Dashboard</div>
       <div class="topbar-right">
         <div class="date-badge" id="dateBadge"></div>
-        <div class="notif-btn" onclick="navigate('tarefas')">
+        <div class="notif-btn" onclick="toggleNotifPanel()">
           🔔<span class="notif-count" id="notifCount">0</span>
         </div>
       </div>
@@ -937,7 +945,7 @@ async function initApp() {
     clearTimeout(timeout);
     document.getElementById('loadingOverlay').style.display = 'none';
     renderSidebarClients();
-    document.getElementById('notifCount').textContent = pendingTasks();
+    updateNotifBadge();
     navigate('dashboard');
   } catch(e) {
     document.getElementById('loadingOverlay').style.display = 'none';
@@ -964,13 +972,14 @@ function navigate(page, projectId) {
   const navEl = document.getElementById('nav-' + page);
   if (navEl) navEl.classList.add('active');
 
-  const titles = { dashboard: 'Dashboard', clientes: 'Clientes', tarefas: 'Tarefas', agenda: 'Agenda', detail: 'Cliente' };
+  const titles = { dashboard: 'Dashboard', clientes: 'Clientes', tarefas: 'Tarefas', agenda: 'Agenda', cronograma: 'Cronograma', detail: 'Cliente' };
   document.getElementById('pageTitle').textContent = titles[page] || page;
 
   if (page === 'dashboard') renderDashboard();
   else if (page === 'clientes') renderClientes();
   else if (page === 'tarefas') renderTarefas();
   else if (page === 'agenda') renderAgenda();
+  else if (page === 'cronograma') renderCronograma();
   else if (page === 'detail') renderDetail(projectId);
 }
 
@@ -1558,6 +1567,131 @@ async function loadGoogleCalendarEvents(token) {
   }
 }
 
+// ── CRONOGRAMA ──
+function renderCronograma() {
+  const today = new Date();
+  today.setHours(0,0,0,0);
+  const active = state.projects.filter(p => p.status === 'ATIVO');
+
+  const rows = active.map(proj => {
+    const tasks = state.tasks.filter(t => t.projectId === proj.id && t.deadline);
+    if (!tasks.length) return `
+      <div class="crono-row">
+        <div class="crono-label">${proj.name}</div>
+        <div class="crono-bar-area" style="color:var(--text3);font-size:.75rem;padding:0 8px">Sem tarefas com prazo</div>
+      </div>`;
+
+    const dates = tasks.map(t => new Date(t.deadline + 'T00:00:00'));
+    const minDate = new Date(Math.min(...dates));
+    const maxDate = new Date(Math.max(...dates));
+    // window: 60 dias centrado no hoje
+    const winStart = new Date(today); winStart.setDate(winStart.getDate() - 15);
+    const winEnd = new Date(today); winEnd.setDate(winEnd.getDate() + 45);
+    const winMs = winEnd - winStart;
+
+    const bars = tasks.filter(t => t.deadline).map(t => {
+      const d = new Date(t.deadline + 'T00:00:00');
+      const pct = Math.max(0, Math.min(100, ((d - winStart) / winMs) * 100));
+      const color = t.status === 'completed' ? '#16a34a' : d < today ? '#dc2626' : '#3b82f6';
+      const label = t.status === 'completed' ? '✅' : d < today ? '⚠️' : '🔵';
+      return `<div title="${t.title} — ${fmtDate(t.deadline)}" style="position:absolute;left:calc(${pct.toFixed(1)}% - 6px);top:50%;transform:translateY(-50%);width:12px;height:12px;border-radius:50%;background:${color};cursor:default;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.3)" data-tip="${label} ${t.title}"></div>`;
+    }).join('');
+
+    // linha do projeto
+    const projStart = Math.max(0, Math.min(100, ((minDate - winStart) / winMs) * 100));
+    const projEnd   = Math.max(0, Math.min(100, ((maxDate - winStart) / winMs) * 100));
+    const projW = Math.max(2, projEnd - projStart);
+    const done = tasks.filter(t=>t.status==='completed').length;
+
+    return `
+      <div class="crono-row">
+        <div class="crono-label" onclick="openProject('${proj.id}')" style="cursor:pointer" title="Abrir cliente">
+          ${proj.name}
+          <div style="font-size:.68rem;color:var(--text3);font-weight:400">${done}/${tasks.length} tarefas</div>
+        </div>
+        <div class="crono-bar-area" style="position:relative">
+          <div style="position:absolute;left:${projStart.toFixed(1)}%;width:${projW.toFixed(1)}%;height:6px;top:50%;transform:translateY(-50%);background:rgba(59,130,246,.2);border-radius:4px"></div>
+          ${bars}
+        </div>
+      </div>`;
+  }).join('');
+
+  // cabeçalho de datas
+  const winStart2 = new Date(today); winStart2.setDate(winStart2.getDate() - 15);
+  const labels = Array.from({length:7}, (_,i) => {
+    const d = new Date(winStart2); d.setDate(d.getDate() + i*9);
+    return `<span style="flex:1;font-size:.68rem;color:var(--text3)">${d.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'})}</span>`;
+  }).join('');
+
+  // linha "hoje"
+  const todayPct = (((today - winStart2) / (60*864e5)) * 100).toFixed(1);
+
+  document.getElementById('pageContent').innerHTML = `
+    <div style="background:var(--white);border-radius:12px;border:1px solid var(--border);overflow:hidden">
+      <div style="padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between">
+        <div style="font-size:.85rem;font-weight:700;color:var(--text)">📋 Cronograma de Tarefas — próximos 45 dias</div>
+        <div style="display:flex;gap:12px;font-size:.72rem;color:var(--text2)">
+          <span><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#3b82f6;margin-right:4px"></span>Pendente</span>
+          <span><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#dc2626;margin-right:4px"></span>Atrasada</span>
+          <span><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#16a34a;margin-right:4px"></span>Concluída</span>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:180px 1fr;border-bottom:1px solid var(--border)">
+        <div style="padding:8px 16px;font-size:.7rem;color:var(--text3);font-weight:600;border-right:1px solid var(--border)">CLIENTE</div>
+        <div style="padding:8px 12px;display:flex">${labels}</div>
+      </div>
+      <div style="position:relative">
+        <div style="position:absolute;left:calc(180px + ${todayPct}% * (100% - 180px) / 100);top:0;bottom:0;width:1px;background:rgba(220,38,38,.4);z-index:1;pointer-events:none"></div>
+        ${rows || '<div style="padding:32px;text-align:center;color:var(--text3)">Nenhum cliente ativo com tarefas.</div>'}
+      </div>
+    </div>
+  `;
+}
+
+// ── NOTIFICAÇÕES ──
+function getMyNotifications() {
+  const name = state.currentUser?.name || '';
+  return state.tasks.filter(t =>
+    t.status !== 'completed' &&
+    t.assignedTo &&
+    t.assignedTo.toLowerCase().includes(name.split(' ')[0].toLowerCase())
+  ).sort((a,b) => (a.deadline||'').localeCompare(b.deadline||''));
+}
+
+function updateNotifBadge() {
+  const n = getMyNotifications().length;
+  const el = document.getElementById('notifCount');
+  if (el) el.textContent = n;
+}
+
+function toggleNotifPanel() {
+  let panel = document.getElementById('notifPanel');
+  if (panel) { panel.remove(); return; }
+  const notifs = getMyNotifications();
+  panel = document.createElement('div');
+  panel.id = 'notifPanel';
+  panel.style.cssText = 'position:fixed;top:56px;right:16px;width:300px;background:var(--white);border:1px solid var(--border);border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,.15);z-index:1000;overflow:hidden';
+  panel.innerHTML = `
+    <div style="padding:12px 16px;border-bottom:1px solid var(--border);font-size:.82rem;font-weight:700;color:var(--text);display:flex;justify-content:space-between">
+      🔔 Minhas Tarefas Pendentes
+      <span style="cursor:pointer;color:var(--text3)" onclick="document.getElementById('notifPanel').remove()">✕</span>
+    </div>
+    ${notifs.length ? notifs.slice(0,8).map(t => {
+      const proj = state.projects.find(p => p.id === t.projectId);
+      const atrasada = t.deadline && t.deadline < new Date().toISOString().split('T')[0];
+      return `<div onclick="openProject('${t.projectId}');document.getElementById('notifPanel')?.remove()" style="padding:10px 16px;border-bottom:1px solid var(--border);cursor:pointer;transition:background .15s" onmouseover="this.style.background='var(--bg)'" onmouseout="this.style.background=''">
+        <div style="font-size:.82rem;font-weight:600;color:var(--text)">${t.title}</div>
+        <div style="font-size:.72rem;color:var(--text3);margin-top:2px">${proj?.name||''} ${t.deadline ? '· ' + (atrasada?'<span style="color:#dc2626">⚠️ '+fmtDate(t.deadline)+'</span>':fmtDate(t.deadline)) : ''}</div>
+      </div>`;
+    }).join('') : '<div style="padding:20px;text-align:center;color:var(--text3);font-size:.82rem">Nenhuma tarefa pendente 🎉</div>'}
+    ${notifs.length > 8 ? `<div style="padding:8px 16px;font-size:.75rem;color:var(--text3);text-align:center">+${notifs.length-8} mais</div>` : ''}
+  `;
+  document.body.appendChild(panel);
+  setTimeout(() => document.addEventListener('click', function h(e){
+    if (!panel.contains(e.target) && !e.target.closest('.notif-btn')) { panel.remove(); document.removeEventListener('click',h); }
+  }), 100);
+}
+
 function openModalAlterarSenha() {
   openModal(`
     <div class="modal-title">🔑 Alterar Senha</div>
@@ -1753,7 +1887,7 @@ async function saveNewTask(projectId) {
       status: 'pending'
     });
     state.tasks.unshift(mapTask(raw));
-    document.getElementById('notifCount').textContent = pendingTasks();
+    updateNotifBadge();
     closeModal();
     if (currentPage === 'detail') renderDetail(projectId || pid);
     else if (currentPage === 'tarefas') renderTarefas();
@@ -1796,7 +1930,7 @@ async function saveEditTask(id, projectId) {
     });
     const idx = state.tasks.findIndex(t => t.id === id);
     if (idx >= 0) state.tasks[idx] = mapTask(raw);
-    document.getElementById('notifCount').textContent = pendingTasks();
+    updateNotifBadge();
     closeModal();
     if (currentPage === 'detail') renderDetail(projectId);
     else if (currentPage === 'tarefas') renderTarefas();
@@ -1805,10 +1939,12 @@ async function saveEditTask(id, projectId) {
 
 async function completeTask(id, projectId) {
   try {
-    const raw = await api.updateTask(id, { status: 'completed' });
+    const task = state.tasks.find(t => t.id === id);
+    const newStatus = task?.status === 'completed' ? 'pending' : 'completed';
+    const raw = await api.updateTask(id, { status: newStatus });
     const idx = state.tasks.findIndex(t => t.id === id);
     if (idx >= 0) state.tasks[idx] = mapTask(raw);
-    document.getElementById('notifCount').textContent = pendingTasks();
+    updateNotifBadge();
     if (currentPage === 'detail' && projectId) renderDetail(projectId);
     else if (currentPage === 'tarefas') renderTarefas();
   } catch (e) { alert('Erro: ' + e.message); }
@@ -1819,7 +1955,7 @@ async function deleteTask(id, projectId) {
   try {
     await api.deleteTask(id);
     state.tasks = state.tasks.filter(t => t.id !== id);
-    document.getElementById('notifCount').textContent = pendingTasks();
+    updateNotifBadge();
     if (currentPage === 'detail' && projectId) renderDetail(projectId);
     else if (currentPage === 'tarefas') renderTarefas();
   } catch (e) { alert('Erro: ' + e.message); }
