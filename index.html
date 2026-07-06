@@ -450,13 +450,44 @@ function calcSaldoMensal(project, year, month) {
   return { saldoInicial, visitasMes, horasGastas, saldoFinal };
 }
 
+function abrirModalRelatorio(projectId) {
+  const now = new Date();
+  const meses = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+  const anos = [now.getFullYear()-1, now.getFullYear(), now.getFullYear()+1];
+  openModal(`
+    <div class="modal-title">Gerar Relatório Mensal</div>
+    <div class="form-row">
+      <div class="form-group">
+        <div class="form-label">Mês</div>
+        <select class="form-input" id="rel_month">
+          ${meses.map((m,i)=>`<option value="${i}" ${i===now.getMonth()?'selected':''}>${m}</option>`).join('')}
+        </select>
+      </div>
+      <div class="form-group">
+        <div class="form-label">Ano</div>
+        <select class="form-input" id="rel_year">
+          ${anos.map(a=>`<option value="${a}" ${a===now.getFullYear()?'selected':''}>${a}</option>`).join('')}
+        </select>
+      </div>
+    </div>
+    <div class="form-actions">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="gerarRelatorioMensal('${projectId}')">Gerar</button>
+    </div>
+  `);
+}
+
 function gerarRelatorioMensal(projectId) {
   const p = state.projects.find(x => x.id === projectId);
   if (!p) return;
 
+  const monthEl = document.getElementById('rel_month');
+  const yearEl  = document.getElementById('rel_year');
   const now = new Date();
-  const year = now.getFullYear();
-  const month = now.getMonth();
+  const year  = yearEl  ? parseInt(yearEl.value)  : now.getFullYear();
+  const month = monthEl ? parseInt(monthEl.value) : now.getMonth();
+  closeModal();
+
   const { saldoInicial, visitasMes, horasGastas, saldoFinal } = calcSaldoMensal(p, year, month);
 
   const meses = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
@@ -562,16 +593,15 @@ function gerarRelatorioMensal(projectId) {
   <span>${p.name} — ${mesNome}</span>
 </div>
 
-<div style="text-align:center;margin:32px 0 8px" class="no-print">
-  <button onclick="window.close()" style="padding:10px 28px;background:#1A2F4A;color:#fff;border:none;border-radius:8px;font-size:.95rem;cursor:pointer;font-family:Arial">← Voltar ao sistema</button>
+<div style="text-align:center;margin:32px 0 8px;display:flex;justify-content:center;gap:12px" class="no-print">
+  <button onclick="renderDetail('${projectId}')" style="padding:10px 28px;background:#6B7280;color:#fff;border:none;border-radius:8px;font-size:.95rem;cursor:pointer;font-family:inherit">← Voltar ao sistema</button>
+  <button onclick="window.print()" style="padding:10px 28px;background:#1A2F4A;color:#fff;border:none;border-radius:8px;font-size:.95rem;cursor:pointer;font-family:inherit">🖨 Imprimir</button>
 </div>
-<script>window.onload = () => { window.print(); }<\/script>
 </body>
 </html>`;
 
-  const w = window.open('', '_blank');
-  w.document.write(html);
-  w.document.close();
+  document.getElementById('pageContent').innerHTML = html;
+  window.scrollTo(0, 0);
 }
 
 function calcTotalSaldo() {
@@ -1130,7 +1160,7 @@ function renderDetail(id) {
         <span class="detail-status-badge">${p.status}</span>
       </div>
       <div class="detail-topbar-right" style="display:flex;align-items:center;gap:16px">
-        <button onclick="gerarRelatorioMensal('${id}')" style="background:var(--blue);color:#fff;border:none;border-radius:8px;padding:8px 14px;font-size:.8rem;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px">📄 Relatório do Mês</button>
+        <button onclick="abrirModalRelatorio('${id}')" style="background:var(--blue);color:#fff;border:none;border-radius:8px;padding:8px 14px;font-size:.8rem;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px">📄 Relatório do Mês</button>
         <div>
           <div class="detail-credit-label">Crédito Total &nbsp;&nbsp;&nbsp; Total</div>
           <div class="detail-credit-value ${saldo<0?'saldo-neg':''}">${fmt(saldo)} h</div>
