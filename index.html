@@ -1173,8 +1173,21 @@ function taskBadge(t) {
 }
 
 function renderTabTarefas(id) {
-  const tasks = state.tasks.filter(t => t.projectId === id);
+  // Preserve filter values before re-render
+  const selUser   = document.getElementById('tf_user')?.value   || '';
+  const selStatus = document.getElementById('tf_status')?.value || '';
+  const selFrom   = document.getElementById('tf_from')?.value   || '';
+  const selTo     = document.getElementById('tf_to')?.value     || '';
+
+  let tasks = state.tasks.filter(t => t.projectId === id);
   const users = [...new Set(tasks.map(t=>t.assignedTo).filter(Boolean))];
+
+  // Apply filters
+  if (selUser)   tasks = tasks.filter(t => t.assignedTo === selUser);
+  if (selStatus) tasks = tasks.filter(t => t.status === selStatus);
+  if (selFrom)   tasks = tasks.filter(t => t.deadline && t.deadline >= selFrom);
+  if (selTo)     tasks = tasks.filter(t => t.deadline && t.deadline <= selTo);
+
   return `
     <div class="filter-card">
       <span class="filter-card-label">⚙ Filtros</span>
@@ -1182,24 +1195,24 @@ function renderTabTarefas(id) {
         <div class="filter-group-label">Atribuído a</div>
         <select class="filter-select" id="tf_user" onchange="renderTab('${id}')">
           <option value="">Todos</option>
-          ${users.map(u=>`<option value="${u}">${u}</option>`).join('')}
+          ${users.map(u=>`<option value="${u}" ${u===selUser?'selected':''}>${u}</option>`).join('')}
         </select>
       </div>
       <div class="filter-group">
         <div class="filter-group-label">Status</div>
         <select class="filter-select" id="tf_status" onchange="renderTab('${id}')">
           <option value="">Todos</option>
-          <option value="todo">Pendente</option>
-          <option value="completed">Concluída</option>
+          <option value="todo" ${selStatus==='todo'?'selected':''}>Pendente</option>
+          <option value="completed" ${selStatus==='completed'?'selected':''}>Concluída</option>
         </select>
       </div>
       <div class="filter-group">
         <div class="filter-group-label">De</div>
-        <input class="filter-input" type="date" id="tf_from" style="width:140px" onchange="renderTab('${id}')">
+        <input class="filter-input" type="date" id="tf_from" style="width:140px" value="${selFrom}" onchange="renderTab('${id}')">
       </div>
       <div class="filter-group">
         <div class="filter-group-label">Até</div>
-        <input class="filter-input" type="date" id="tf_to" style="width:140px" onchange="renderTab('${id}')">
+        <input class="filter-input" type="date" id="tf_to" style="width:140px" value="${selTo}" onchange="renderTab('${id}')">
       </div>
       <button class="clear-btn" onclick="clearTaskFilters('${id}')">Limpar</button>
     </div>
@@ -1227,7 +1240,7 @@ function renderTabTarefas(id) {
               <button class="icon-btn" onclick="openModalEditTask('${t.id}','${id}')">✏</button>
               <button class="icon-btn del" onclick="deleteTask('${t.id}','${id}')">🗑</button>
             </div></td>
-          </tr>`).join('') : `<tr><td colspan="7"><div class="empty"><div class="empty-icon">✅</div><div class="empty-text">Nenhuma tarefa cadastrada.</div></div></td></tr>`}
+          </tr>`).join('') : `<tr><td colspan="7"><div class="empty"><div class="empty-icon">✅</div><div class="empty-text">Nenhuma tarefa encontrada.</div></div></td></tr>`}
         </tbody>
       </table>
     </div>
