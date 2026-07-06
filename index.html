@@ -384,6 +384,8 @@ let state = {
   contacts: [],
   occurrences: [],
   profiles: [],
+  cronoItems: [],
+  cronoFiles: [],
   customEvents: [],
   loading: false
 };
@@ -771,6 +773,44 @@ const api = {
   async deleteOccurrence(id) {
     const { error } = await sb.from('occurrences').delete().eq('id', id);
     if (error) throw error;
+  },
+  async getCronoItems(projectId) {
+    const { data, error } = await sb.from('cronograma_items').select('*').eq('project_id', projectId).order('start_date');
+    if (error) throw error;
+    return data || [];
+  },
+  async createCronoItem(obj) {
+    const { data, error } = await sb.from('cronograma_items').insert(obj).select().single();
+    if (error) throw error;
+    return data;
+  },
+  async updateCronoItem(id, obj) {
+    const { data, error } = await sb.from('cronograma_items').update(obj).eq('id', id).select().single();
+    if (error) throw error;
+    return data;
+  },
+  async deleteCronoItem(id) {
+    const { error } = await sb.from('cronograma_items').delete().eq('id', id);
+    if (error) throw error;
+  },
+  async getCronoFiles(projectId) {
+    const { data, error } = await sb.from('cronograma_files').select('id, project_id, file_name, file_type, created_at').eq('project_id', projectId).order('created_at', { ascending: false });
+    if (error) throw error;
+    return data || [];
+  },
+  async createCronoFile(obj) {
+    const { data, error } = await sb.from('cronograma_files').insert(obj).select('id, project_id, file_name, file_type, created_at').single();
+    if (error) throw error;
+    return data;
+  },
+  async getCronoFileData(id) {
+    const { data, error } = await sb.from('cronograma_files').select('file_data, file_type, file_name').eq('id', id).single();
+    if (error) throw error;
+    return data;
+  },
+  async deleteCronoFile(id) {
+    const { error } = await sb.from('cronograma_files').delete().eq('id', id);
+    if (error) throw error;
   }
 };
 
@@ -828,6 +868,14 @@ function mapContact(r) {
 
 function mapOccurrence(r) {
   return { id: r.id, projectId: r.project_id, date: r.date || '', description: r.description || '', title: r.title || '', createdAt: r.created_at };
+}
+
+function mapCronoItem(r) {
+  return { id: r.id, projectId: r.project_id, title: r.title || '', startDate: r.start_date || '', endDate: r.end_date || '', responsible: r.responsible || '', color: r.color || '#1A2F4A', status: r.status || 'em_andamento', createdAt: r.created_at };
+}
+
+function mapCronoFile(r) {
+  return { id: r.id, projectId: r.project_id, fileName: r.file_name || '', fileType: r.file_type || '', createdAt: r.created_at };
 }
 
 // ── LOAD DATA ──
@@ -1173,6 +1221,7 @@ function renderDetail(id) {
       <button class="tab ${detailTab==='notas'?'active':''}" onclick="switchTab('notas','${id}')">Notas</button>
       <button class="tab ${detailTab==='contatos'?'active':''}" onclick="switchTab('contatos','${id}')">Contatos</button>
       <button class="tab ${detailTab==='ocorrencias'?'active':''}" onclick="switchTab('ocorrencias','${id}')">Ocorrências</button>
+      <button class="tab ${detailTab==='cronograma'?'active':''}" onclick="switchTab('cronograma','${id}')">📅 Cronograma</button>
     </div>
     <div id="tabContent" class="tab-content-wrap"></div>
   `;
@@ -1183,7 +1232,24 @@ function switchTab(tab, id) {
   detailTab = tab;
   document.querySelectorAll('#detailTabs .tab').forEach(el => el.classList.remove('active'));
   event.currentTarget.classList.add('active');
-  renderTab(id);
+  if (tab === 'cronograma') {
+    loadCronoData(id).then(() => renderTab(id));
+  } else {
+    renderTab(id);
+  }
+}
+
+async function loadCronoData(projectId) {
+  try {
+    const [items, files] = await Promise.all([
+      api.getCronoItems(projectId).catch(() => []),
+      api.getCronoFiles(projectId).catch(() => [])
+    ]);
+    state.cronoItems = state.cronoItems.filter(c => c.projectId !== projectId);
+    state.cronoFiles = state.cronoFiles.filter(f => f.projectId !== projectId);
+    state.cronoItems.push(...items.map(mapCronoItem));
+    state.cronoFiles.push(...files.map(mapCronoFile));
+  } catch(e) { console.warn('Cronograma não disponível:', e.message); }
 }
 
 function renderTab(id) {
@@ -1194,6 +1260,7 @@ function renderTab(id) {
   else if (detailTab === 'notas') el.innerHTML = renderTabNotas(id);
   else if (detailTab === 'contatos') el.innerHTML = renderTabContatos(id);
   else if (detailTab === 'ocorrencias') el.innerHTML = renderTabOcorrencias(id);
+  else if (detailTab === 'cronograma') el.innerHTML = renderTabCronograma(id);
 }
 
 function taskBadge(t) {
@@ -1424,6 +1491,243 @@ function renderTabOcorrencias(id) {
       </div>
     </div>
   `;
+}
+
+// ── CRONOGRAMA TAB ──
+function renderTabCronograma(id) {
+  const items = state.cronoItems.filter(c => c.projectId === id).sort((a,b) => a.startDate.localeCompare(b.startDate));
+  const files = state.cronoFiles.filter(f => f.projectId === id);
+
+  const statusLabel = { 'nao_iniciado': 'Não iniciado', 'em_andamento': 'Em andamento', 'concluido': 'Concluído', 'atrasado': 'Atrasado' };
+  const statusColor = { 'nao_iniciado': '#6B7280', 'em_andamento': '#1A2F4A', 'concluido': '#16A34A', 'atrasado': '#DC2626' };
+
+  // Gantt bars
+  let gantt = '';
+  if (items.length) {
+    const allDates = items.flatMap(i => [i.startDate, i.endDate]).filter(Boolean).sort();
+    const minDate = new Date(allDates[0]);
+    const maxDate = new Date(allDates[allDates.length-1]);
+    const totalDays = Math.max(1, (maxDate - minDate) / 86400000) + 1;
+
+    gantt = `
+      <div style="overflow-x:auto;margin-top:4px">
+        <div style="min-width:600px">
+          ${items.map(item => {
+            const s = item.startDate ? new Date(item.startDate) : minDate;
+            const e = item.endDate   ? new Date(item.endDate)   : s;
+            const left  = ((s - minDate) / 86400000) / totalDays * 100;
+            const width = Math.max(1, ((e - s)  / 86400000) + 1) / totalDays * 100;
+            const col   = statusColor[item.status] || '#1A2F4A';
+            return `
+              <div style="display:grid;grid-template-columns:180px 1fr 80px;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border)">
+                <div style="font-size:.82rem;font-weight:600;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${item.title}">${item.title}</div>
+                <div style="background:var(--bg2);border-radius:4px;height:20px;position:relative">
+                  <div style="position:absolute;left:${left.toFixed(1)}%;width:${width.toFixed(1)}%;background:${col};height:100%;border-radius:4px;min-width:4px"></div>
+                </div>
+                <div style="font-size:.72rem;color:${col};font-weight:600;white-space:nowrap">${statusLabel[item.status]||item.status}</div>
+              </div>`;
+          }).join('')}
+        </div>
+      </div>`;
+  }
+
+  return `
+    <div class="list-card">
+      <div class="list-card-header">
+        <span class="list-card-title">Etapas do Cronograma</span>
+        <button class="list-action-add" onclick="openModalNewCronoItem('${id}')">+ Adicionar etapa</button>
+      </div>
+      <div style="padding:0 20px 16px">
+        ${items.length ? `
+          <div style="display:grid;grid-template-columns:180px 1fr 80px;gap:8px;padding:6px 0;font-size:.7rem;font-weight:700;color:var(--text2);text-transform:uppercase;border-bottom:2px solid var(--border)">
+            <div>Etapa</div><div>Linha do tempo</div><div>Status</div>
+          </div>
+          ${gantt}
+          <div style="margin-top:12px;display:flex;flex-direction:column;gap:6px">
+            ${items.map(item => `
+              <div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--bg2);border-radius:8px">
+                <div style="width:10px;height:10px;border-radius:50%;background:${statusColor[item.status]||'#1A2F4A'};flex-shrink:0"></div>
+                <div style="flex:1;min-width:0">
+                  <div style="font-weight:600;font-size:.85rem">${item.title}</div>
+                  <div style="font-size:.75rem;color:var(--text2)">${fmtDate(item.startDate)} → ${fmtDate(item.endDate)}${item.responsible?' · '+item.responsible:''}</div>
+                </div>
+                <div style="display:flex;gap:4px">
+                  <button class="icon-btn" onclick="openModalEditCronoItem('${item.id}','${id}')">✏</button>
+                  <button class="icon-btn del" onclick="deleteCronoItem('${item.id}','${id}')">🗑</button>
+                </div>
+              </div>`).join('')}
+          </div>` : '<div class="empty"><div class="empty-icon">📅</div><div class="empty-text">Nenhuma etapa cadastrada.</div></div>'}
+      </div>
+    </div>
+
+    <div class="list-card" style="margin-top:16px">
+      <div class="list-card-header">
+        <span class="list-card-title">Arquivos do Cronograma</span>
+        <label style="cursor:pointer;background:var(--gold);color:#fff;border:none;border-radius:8px;padding:6px 14px;font-size:.8rem;font-weight:700">
+          📎 Upload
+          <input type="file" accept="image/*,.pdf" style="display:none" onchange="uploadCronoFile(this,'${id}')">
+        </label>
+      </div>
+      <div style="padding:0 20px 16px">
+        ${files.length ? `<div style="display:flex;flex-direction:column;gap:8px">
+          ${files.map(f => `
+            <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--bg2);border-radius:8px">
+              <span style="font-size:1.2rem">${f.fileType.startsWith('image')?'🖼':'📄'}</span>
+              <div style="flex:1;min-width:0">
+                <div style="font-weight:600;font-size:.85rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${f.fileName}</div>
+                <div style="font-size:.73rem;color:var(--text2)">${new Date(f.createdAt).toLocaleDateString('pt-BR')}</div>
+              </div>
+              <button class="icon-btn" onclick="viewCronoFile('${f.id}')">👁</button>
+              <button class="icon-btn del" onclick="deleteCronoFile('${f.id}','${id}')">🗑</button>
+            </div>`).join('')}
+        </div>` : '<div class="empty"><div class="empty-icon">📂</div><div class="empty-text">Nenhum arquivo enviado.</div></div>'}
+      </div>
+    </div>`;
+}
+
+function openModalNewCronoItem(projectId) {
+  openModal(`
+    <div class="modal-title">Nova Etapa</div>
+    <div class="form-group"><div class="form-label">Título *</div><input class="form-input" id="fc_title" placeholder="Ex: Diagnóstico"></div>
+    <div class="form-row">
+      <div class="form-group"><div class="form-label">Início</div><input class="form-input" id="fc_start" type="date"></div>
+      <div class="form-group"><div class="form-label">Fim</div><input class="form-input" id="fc_end" type="date"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><div class="form-label">Responsável</div><input class="form-input" id="fc_resp" placeholder="Nome"></div>
+      <div class="form-group"><div class="form-label">Status</div>
+        <select class="form-input" id="fc_status">
+          <option value="nao_iniciado">Não iniciado</option>
+          <option value="em_andamento" selected>Em andamento</option>
+          <option value="concluido">Concluído</option>
+          <option value="atrasado">Atrasado</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-actions">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveNewCronoItem('${projectId}')">Salvar</button>
+    </div>
+  `);
+}
+
+async function saveNewCronoItem(projectId) {
+  const title = document.getElementById('fc_title').value.trim();
+  if (!title) return alert('Título obrigatório');
+  try {
+    const raw = await api.createCronoItem({
+      project_id: projectId,
+      title,
+      start_date: document.getElementById('fc_start').value || null,
+      end_date:   document.getElementById('fc_end').value   || null,
+      responsible: document.getElementById('fc_resp').value,
+      status: document.getElementById('fc_status').value
+    });
+    state.cronoItems.push(mapCronoItem(raw));
+    closeModal();
+    renderTab(projectId);
+  } catch(e) { alert('Erro ao salvar: ' + e.message); }
+}
+
+function openModalEditCronoItem(id, projectId) {
+  const item = state.cronoItems.find(c => c.id === id);
+  if (!item) return;
+  openModal(`
+    <div class="modal-title">Editar Etapa</div>
+    <div class="form-group"><div class="form-label">Título *</div><input class="form-input" id="fc_title" value="${item.title}"></div>
+    <div class="form-row">
+      <div class="form-group"><div class="form-label">Início</div><input class="form-input" id="fc_start" type="date" value="${item.startDate}"></div>
+      <div class="form-group"><div class="form-label">Fim</div><input class="form-input" id="fc_end" type="date" value="${item.endDate}"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><div class="form-label">Responsável</div><input class="form-input" id="fc_resp" value="${item.responsible}"></div>
+      <div class="form-group"><div class="form-label">Status</div>
+        <select class="form-input" id="fc_status">
+          <option value="nao_iniciado" ${item.status==='nao_iniciado'?'selected':''}>Não iniciado</option>
+          <option value="em_andamento" ${item.status==='em_andamento'?'selected':''}>Em andamento</option>
+          <option value="concluido"    ${item.status==='concluido'?'selected':''}>Concluído</option>
+          <option value="atrasado"     ${item.status==='atrasado'?'selected':''}>Atrasado</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-actions">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveEditCronoItem('${id}','${projectId}')">Salvar</button>
+    </div>
+  `);
+}
+
+async function saveEditCronoItem(id, projectId) {
+  const title = document.getElementById('fc_title').value.trim();
+  if (!title) return alert('Título obrigatório');
+  try {
+    const raw = await api.updateCronoItem(id, {
+      title,
+      start_date:  document.getElementById('fc_start').value || null,
+      end_date:    document.getElementById('fc_end').value   || null,
+      responsible: document.getElementById('fc_resp').value,
+      status:      document.getElementById('fc_status').value
+    });
+    const idx = state.cronoItems.findIndex(c => c.id === id);
+    if (idx >= 0) state.cronoItems[idx] = mapCronoItem(raw);
+    closeModal();
+    renderTab(projectId);
+  } catch(e) { alert('Erro ao salvar: ' + e.message); }
+}
+
+async function deleteCronoItem(id, projectId) {
+  if (!confirm('Excluir esta etapa?')) return;
+  try {
+    await api.deleteCronoItem(id);
+    state.cronoItems = state.cronoItems.filter(c => c.id !== id);
+    renderTab(projectId);
+  } catch(e) { alert('Erro: ' + e.message); }
+}
+
+async function uploadCronoFile(input, projectId) {
+  const file = input.files[0];
+  if (!file) return;
+  if (file.size > 5 * 1024 * 1024) return alert('Arquivo muito grande (máx 5MB)');
+  const reader = new FileReader();
+  reader.onload = async (e) => {
+    try {
+      const raw = await api.createCronoFile({
+        project_id: projectId,
+        file_name: file.name,
+        file_type: file.type,
+        file_data: e.target.result
+      });
+      state.cronoFiles.unshift(mapCronoFile(raw));
+      renderTab(projectId);
+    } catch(err) { alert('Erro ao enviar: ' + err.message); }
+  };
+  reader.readAsDataURL(file);
+}
+
+async function viewCronoFile(id) {
+  try {
+    const f = await api.getCronoFileData(id);
+    const w = window.open('');
+    if (f.fileType.startsWith('image')) {
+      w.document.write(`<img src="${f.file_data}" style="max-width:100%">`);
+    } else {
+      const link = w.document.createElement('a');
+      link.href = f.file_data;
+      link.download = f.file_name;
+      w.document.body.appendChild(link);
+      link.click();
+      w.close();
+    }
+  } catch(e) { alert('Erro ao abrir arquivo: ' + e.message); }
+}
+
+async function deleteCronoFile(id, projectId) {
+  if (!confirm('Excluir este arquivo?')) return;
+  try {
+    await api.deleteCronoFile(id);
+    state.cronoFiles = state.cronoFiles.filter(f => f.id !== id);
+    renderTab(projectId);
+  } catch(e) { alert('Erro: ' + e.message); }
 }
 
 // ── TAREFAS PAGE ──
