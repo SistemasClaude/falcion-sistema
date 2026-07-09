@@ -1738,14 +1738,61 @@ async function deleteCronoFile(id, projectId) {
 let tarefaSearch = '';
 let tarefaStatus = 'all';
 let tarefaProject = 'all';
+let tarefaConsultor = 'all';
 
 function renderTarefas() {
-  let tasks = state.tasks;
-  if (tarefaSearch) tasks = tasks.filter(t => t.title.toLowerCase().includes(tarefaSearch.toLowerCase()));
-  if (tarefaStatus !== 'all') tasks = tasks.filter(t => t.status === tarefaStatus);
-  if (tarefaProject !== 'all') tasks = tasks.filter(t => t.projectId === tarefaProject);
+  const allTasks = state.tasks;
+  const consultores = [...new Set(allTasks.map(t => t.assignedTo).filter(Boolean))].sort();
+
+  let tasks = allTasks;
+  if (tarefaSearch)    tasks = tasks.filter(t => t.title.toLowerCase().includes(tarefaSearch.toLowerCase()));
+  if (tarefaStatus !== 'all')    tasks = tasks.filter(t => t.status === tarefaStatus);
+  if (tarefaProject !== 'all')   tasks = tasks.filter(t => t.projectId === tarefaProject);
+  if (tarefaConsultor !== 'all') tasks = tasks.filter(t => t.assignedTo === tarefaConsultor);
+
   const today = new Date().toISOString().split('T')[0];
   const projName = id => (state.projects.find(p => p.id === id) || {}).name || '—';
+
+  // Produtividade: montar painel por consultor (com base nas tasks filtradas por cliente/busca/status, mas sem filtro de consultor)
+  let tasksProd = allTasks;
+  if (tarefaSearch)  tasksProd = tasksProd.filter(t => t.title.toLowerCase().includes(tarefaSearch.toLowerCase()));
+  if (tarefaStatus !== 'all')  tasksProd = tasksProd.filter(t => t.status === tarefaStatus);
+  if (tarefaProject !== 'all') tasksProd = tasksProd.filter(t => t.projectId === tarefaProject);
+
+  const prodMap = {};
+  tasksProd.forEach(t => {
+    const c = t.assignedTo || 'Sem responsável';
+    if (!prodMap[c]) prodMap[c] = { total: 0, concluidas: 0, pendentes: 0, atrasadas: 0 };
+    prodMap[c].total++;
+    if (t.status === 'completed') prodMap[c].concluidas++;
+    else if (t.deadline && t.deadline < today) prodMap[c].atrasadas++;
+    else prodMap[c].pendentes++;
+  });
+
+  const prodHTML = Object.entries(prodMap)
+    .sort((a, b) => b[1].total - a[1].total)
+    .map(([nome, s]) => {
+      const pct = s.total ? Math.round(s.concluidas / s.total * 100) : 0;
+      const ativo = tarefaConsultor === nome;
+      return `
+        <div onclick="tarefaConsultor='${tarefaConsultor===nome?'all':nome}';renderTarefas()"
+          style="cursor:pointer;padding:12px 16px;border-radius:10px;border:2px solid ${ativo?'var(--blue)':'var(--border)'};background:${ativo?'#EFF6FF':'var(--card)'};transition:.15s">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+            <div class="consultant-avatar" style="flex-shrink:0">${initials(nome)}</div>
+            <div style="font-weight:700;font-size:.85rem;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${nome}</div>
+            <div style="font-size:.75rem;font-weight:700;color:${pct>=80?'var(--green)':pct>=50?'var(--orange)':'var(--red)'}">${pct}%</div>
+          </div>
+          <div style="background:var(--bg2);border-radius:4px;height:6px;margin-bottom:8px">
+            <div style="width:${pct}%;background:${pct>=80?'var(--green)':pct>=50?'var(--orange)':'var(--red)'};height:100%;border-radius:4px;transition:.3s"></div>
+          </div>
+          <div style="display:flex;gap:8px;font-size:.72rem;font-weight:600">
+            <span style="color:var(--text2)">Total: ${s.total}</span>
+            <span style="color:var(--green)">✓ ${s.concluidas}</span>
+            <span style="color:var(--orange)">⏳ ${s.pendentes}</span>
+            ${s.atrasadas?`<span style="color:var(--red)">⚠ ${s.atrasadas}</span>`:''}
+          </div>
+        </div>`;
+    }).join('');
 
   document.getElementById('pageContent').innerHTML = `
     <div class="filter-bar" style="margin-bottom:16px">
@@ -1759,8 +1806,23 @@ function renderTarefas() {
         <option value="all">Todos os clientes</option>
         ${state.projects.map(p => `<option value="${p.id}" ${tarefaProject===p.id?'selected':''}>${p.name}</option>`).join('')}
       </select>
+      <select class="filter-select" onchange="tarefaConsultor=this.value;renderTarefas()">
+        <option value="all">Todos os consultores</option>
+        ${consultores.map(c => `<option value="${c}" ${tarefaConsultor===c?'selected':''}>${c}</option>`).join('')}
+      </select>
       <button class="btn btn-primary" onclick="openModalNewTask(null)">+ Nova Tarefa</button>
     </div>
+
+    ${Object.keys(prodMap).length ? `
+    <div style="margin-bottom:16px">
+      <div style="font-size:.72rem;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">
+        Produtividade por Consultor ${tarefaConsultor!=='all'?'<span style="color:var(--blue)">· clique para remover filtro</span>':'· clique para filtrar'}
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px">
+        ${prodHTML}
+      </div>
+    </div>` : ''}
+
     <div class="list-card">
       <div class="list-card-header">
         <span class="list-card-title">Lista de Tarefas (${tasks.length})</span>
