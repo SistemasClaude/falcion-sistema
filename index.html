@@ -1106,6 +1106,8 @@ function renderDashboard() {
     <div class="client-grid">
       ${activeProjects.map(p => {
         const saldo = calcSaldo(p);
+        const _now = new Date();
+        const { saldoInicial: horasIniciais } = calcSaldoMensal(p, _now.getFullYear(), _now.getMonth());
         return `
           <div class="client-card">
             <div class="client-card-banner">
@@ -1118,8 +1120,8 @@ function renderDashboard() {
             <div class="client-card-body" onclick="openProject('${p.id}')">
               <div class="client-card-name">${p.name}</div>
               <div class="client-card-row"><span class="client-card-label">COTA MENSAL</span><span class="client-card-val">${p.monthlyQuotaHours} horas</span></div>
-              <div class="client-card-row"><span class="client-card-label">HORAS INICIAIS</span><span class="client-card-val ${p.initialHours < 0 ? 'saldo-neg' : ''}">${fmt(p.initialHours)} h</span></div>
-              <div class="client-card-row"><span class="client-card-label">SALDO REAL</span><span class="client-card-val ${saldo < 0 ? 'saldo-neg' : ''}">${fmt(saldo)} h</span></div>
+              <div class="client-card-row"><span class="client-card-label">INÍCIO DO MÊS</span><span class="client-card-val ${horasIniciais < 0 ? 'saldo-neg' : ''}">${fmt(horasIniciais)} h</span></div>
+              <div class="client-card-row"><span class="client-card-label">SALDO ATUAL</span><span class="client-card-val ${saldo < 0 ? 'saldo-neg' : ''}">${fmt(saldo)} h</span></div>
               <div class="client-card-row"><span class="client-card-label">STATUS</span><span>${statusText(p.status)}</span></div>
             </div>
           </div>
@@ -1155,11 +1157,13 @@ function renderClientes() {
       </div>
       <table class="task-table">
         <thead><tr>
-          <th>Nome</th><th>Cota Mensal</th><th>Horas Iniciais</th><th>Saldo Real</th><th>Status</th><th>Ações</th>
+          <th>Nome</th><th>Cota Mensal</th><th>Início do Mês</th><th>Saldo Atual</th><th>Status</th><th>Ações</th>
         </tr></thead>
         <tbody>
           ${list.length ? list.map(p => {
             const saldo = calcSaldo(p);
+            const _n = new Date();
+            const { saldoInicial: horasIniciais } = calcSaldoMensal(p, _n.getFullYear(), _n.getMonth());
             const stMap = {'ATIVO':'badge-green','INATIVO':'badge-red','PAUSADO':'badge-orange'};
             return `<tr>
               <td>
@@ -1169,7 +1173,7 @@ function renderClientes() {
                 </div>
               </td>
               <td style="font-size:.85rem">${p.monthlyQuotaHours}h</td>
-              <td style="font-size:.85rem" class="${p.initialHours < 0 ? 'saldo-neg' : ''}">${fmt(p.initialHours)}h</td>
+              <td style="font-size:.85rem" class="${horasIniciais < 0 ? 'saldo-neg' : ''}">${fmt(horasIniciais)}h</td>
               <td style="font-weight:700" class="${saldo < 0 ? 'saldo-neg' : ''}">${fmt(saldo)}h</td>
               <td><span class="badge ${stMap[p.status]||'badge-blue'}">${p.status}</span></td>
               <td><div style="display:flex;gap:4px">
