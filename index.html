@@ -408,14 +408,14 @@ function parseDuration(str) {
 }
 
 function calcSaldo(project) {
-  // Saldo = horas iniciais (saldo trazido do mês anterior) + cota mensal - visitas deste mês
+  // Saldo = saldo anterior (initialHours) − visitas deste mês
   if (!project) return 0;
   const now = new Date();
   const mesStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
   const visitasEsteMes = state.visits
     .filter(v => v.projectId === project.id && v.date && v.date.startsWith(mesStr))
     .reduce((acc, v) => acc + parseDuration(v.duration), 0);
-  return project.initialHours + project.monthlyQuotaHours - visitasEsteMes;
+  return project.initialHours - visitasEsteMes;
 }
 
 function calcSaldoMensal(project, year, month) {
@@ -1125,7 +1125,6 @@ function renderDashboard() {
     <div class="client-grid">
       ${activeProjects.map(p => {
         const saldo = calcSaldo(p);
-        const disponivelMes = p.initialHours + p.monthlyQuotaHours;
         return `
           <div class="client-card">
             <div class="client-card-banner">
@@ -1138,7 +1137,7 @@ function renderDashboard() {
             <div class="client-card-body" onclick="openProject('${p.id}')">
               <div class="client-card-name">${p.name}</div>
               <div class="client-card-row"><span class="client-card-label">COTA MENSAL</span><span class="client-card-val">${p.monthlyQuotaHours} horas</span></div>
-              <div class="client-card-row"><span class="client-card-label">DISPONÍVEL NO MÊS</span><span class="client-card-val ${disponivelMes < 0 ? 'saldo-neg' : ''}">${fmt(disponivelMes)} h</span></div>
+              <div class="client-card-row"><span class="client-card-label">SALDO ANTERIOR</span><span class="client-card-val ${p.initialHours < 0 ? 'saldo-neg' : ''}">${fmt(p.initialHours)} h</span></div>
               <div class="client-card-row"><span class="client-card-label">SALDO ATUAL</span><span class="client-card-val ${saldo < 0 ? 'saldo-neg' : ''}">${fmt(saldo)} h</span></div>
               <div class="client-card-row"><span class="client-card-label">STATUS</span><span>${statusText(p.status)}</span></div>
             </div>
@@ -1175,12 +1174,11 @@ function renderClientes() {
       </div>
       <table class="task-table">
         <thead><tr>
-          <th>Nome</th><th>Cota Mensal</th><th>Disponível no Mês</th><th>Saldo Atual</th><th>Status</th><th>Ações</th>
+          <th>Nome</th><th>Cota Mensal</th><th>Saldo Anterior</th><th>Saldo Atual</th><th>Status</th><th>Ações</th>
         </tr></thead>
         <tbody>
           ${list.length ? list.map(p => {
             const saldo = calcSaldo(p);
-            const disponivelMes = p.initialHours + p.monthlyQuotaHours;
             const stMap = {'ATIVO':'badge-green','INATIVO':'badge-red','PAUSADO':'badge-orange'};
             return `<tr>
               <td>
@@ -1190,7 +1188,7 @@ function renderClientes() {
                 </div>
               </td>
               <td style="font-size:.85rem">${p.monthlyQuotaHours}h</td>
-              <td style="font-size:.85rem" class="${disponivelMes < 0 ? 'saldo-neg' : ''}">${fmt(disponivelMes)}h</td>
+              <td style="font-size:.85rem" class="${p.initialHours < 0 ? 'saldo-neg' : ''}">${fmt(p.initialHours)}h</td>
               <td style="font-weight:700" class="${saldo < 0 ? 'saldo-neg' : ''}">${fmt(saldo)}h</td>
               <td><span class="badge ${stMap[p.status]||'badge-blue'}">${p.status}</span></td>
               <td><div style="display:flex;gap:4px">
