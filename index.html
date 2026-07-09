@@ -456,6 +456,9 @@ function abrirModalRelatorio(projectId) {
   const now = new Date();
   const meses = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
   const anos = [now.getFullYear()-1, now.getFullYear(), now.getFullYear()+1];
+  const consultores = [...new Set(
+    state.visits.filter(v => v.projectId === projectId && v.assignedTo).map(v => v.assignedTo)
+  )].sort();
   openModal(`
     <div class="modal-title">Gerar Relatório Mensal</div>
     <div class="form-row">
@@ -472,6 +475,13 @@ function abrirModalRelatorio(projectId) {
         </select>
       </div>
     </div>
+    <div class="form-group">
+      <div class="form-label">Consultor(a)</div>
+      <select class="form-input" id="rel_consultor">
+        <option value="">Todos os consultores (geral)</option>
+        ${consultores.map(c=>`<option value="${c}">${c}</option>`).join('')}
+      </select>
+    </div>
     <div class="form-actions">
       <button class="btn btn-ghost" onclick="closeModal()">Cancelar</button>
       <button class="btn btn-primary" onclick="gerarRelatorioMensal('${projectId}')">Gerar</button>
@@ -483,17 +493,26 @@ function gerarRelatorioMensal(projectId) {
   const p = state.projects.find(x => x.id === projectId);
   if (!p) return;
 
-  const monthEl = document.getElementById('rel_month');
-  const yearEl  = document.getElementById('rel_year');
+  const monthEl     = document.getElementById('rel_month');
+  const yearEl      = document.getElementById('rel_year');
+  const consultorEl = document.getElementById('rel_consultor');
   const now = new Date();
-  const year  = yearEl  ? parseInt(yearEl.value)  : now.getFullYear();
-  const month = monthEl ? parseInt(monthEl.value) : now.getMonth();
+  const year      = yearEl      ? parseInt(yearEl.value)      : now.getFullYear();
+  const month     = monthEl     ? parseInt(monthEl.value)     : now.getMonth();
+  const consultor = consultorEl ? consultorEl.value           : '';
   closeModal();
 
-  const { saldoInicial, visitasMes, horasGastas, saldoFinal } = calcSaldoMensal(p, year, month);
+  const { saldoInicial, visitasMes: todasVisitas, horasGastas: horasGastasTotal, saldoFinal } = calcSaldoMensal(p, year, month);
+
+  // Filtrar visitas pelo consultor selecionado
+  const visitasMes = consultor
+    ? todasVisitas.filter(v => v.assignedTo === consultor)
+    : todasVisitas;
+  const horasGastas = visitasMes.reduce((acc, v) => acc + parseDuration(v.duration), 0);
 
   const meses = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
   const mesNome = `${meses[month]} / ${year}`;
+  const subtitulo = consultor ? `Consultor(a): ${consultor}` : 'Todos os Consultores';
 
   const fmtH = h => {
     const hh = Math.floor(Math.abs(h));
@@ -502,23 +521,53 @@ function gerarRelatorioMensal(projectId) {
   };
 
   const linhasVisitas = visitasMes.length === 0
-    ? `<tr><td colspan="4" style="text-align:center;color:#9CA3AF;padding:20px">Nenhuma visita registrada neste mês</td></tr>`
+    ? `<tr><td colspan="4" style="text-align:center;color:#9CA3AF;padding:20px">Nenhuma visita registrada neste mês${consultor?' para '+consultor:''}</td></tr>`
     : visitasMes.map(v => {
         const d = new Date(v.date + 'T00:00:00');
-        const dataFmt = d.toLocaleDateString('pt-BR');
         return `<tr>
-          <td>${dataFmt}</td>
+          <td>${d.toLocaleDateString('pt-BR')}</td>
           <td>${v.assignedTo || '—'}</td>
           <td style="max-width:300px">${v.description || '—'}</td>
           <td style="text-align:center;font-weight:700;color:#1D4ED8">${v.duration}</td>
         </tr>`;
       }).join('');
 
+  // KPIs: se filtrado por consultor, não mostrar saldo (pois saldo é do projeto, não do consultor)
+  const kpisHTML = consultor ? `
+  <div class="kpis" style="grid-template-columns:repeat(2,1fr)">
+    <div class="kpi">
+      <div class="kpi-label">Visitas Realizadas</div>
+      <div class="kpi-value">${visitasMes.length}</div>
+    </div>
+    <div class="kpi destaque">
+      <div class="kpi-label">Horas Executadas</div>
+      <div class="kpi-value">${fmtH(horasGastas)}</div>
+    </div>
+  </div>` : `
+  <div class="kpis">
+    <div class="kpi">
+      <div class="kpi-label">Saldo Inicial do Mês</div>
+      <div class="kpi-value">${fmtH(saldoInicial)}</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">Visitas Realizadas</div>
+      <div class="kpi-value">${visitasMes.length}</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">Horas Consumidas</div>
+      <div class="kpi-value neg">${fmtH(horasGastasTotal)}</div>
+    </div>
+    <div class="kpi destaque">
+      <div class="kpi-label">Saldo Final</div>
+      <div class="kpi-value ${saldoFinal < 0 ? 'neg' : ''}">${fmtH(saldoFinal)}</div>
+    </div>
+  </div>`;
+
   const html = `<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8"/>
-<title>Relatório ${p.name} — ${mesNome}</title>
+<title>Relatório ${p.name} — ${mesNome}${consultor?' — '+consultor:''}</title>
 <style>
   *{box-sizing:border-box;margin:0;padding:0}
   body{font-family:Arial,sans-serif;color:#1A2F4A;background:#fff;padding:40px;font-size:13px}
@@ -528,12 +577,12 @@ function gerarRelatorioMensal(projectId) {
   .header-right{text-align:right}
   .header-right .mes{font-size:15px;font-weight:700;color:#1A2F4A}
   .header-right .cliente{font-size:11px;color:#6B7280}
-  .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:28px}
+  .header-right .consultor-tag{display:inline-block;margin-top:6px;background:#1A2F4A;color:#C9A84C;font-size:10px;font-weight:700;padding:3px 10px;border-radius:20px;text-transform:uppercase;letter-spacing:.5px}
+  .kpis{display:grid;gap:12px;margin-bottom:28px}
   .kpi{background:#F0F4F8;border-radius:10px;padding:14px 16px;text-align:center}
   .kpi-label{font-size:10px;color:#6B7280;text-transform:uppercase;letter-spacing:.8px;margin-bottom:4px;font-weight:600}
   .kpi-value{font-size:20px;font-weight:800;color:#1A2F4A}
   .kpi-value.neg{color:#DC2626}
-  .kpi-value.green{color:#16A34A}
   .kpi.destaque{background:#1A2F4A}
   .kpi.destaque .kpi-label{color:#C9A84C}
   .kpi.destaque .kpi-value{color:#fff}
@@ -555,29 +604,13 @@ function gerarRelatorioMensal(projectId) {
   <div class="header-right">
     <div class="mes">${mesNome}</div>
     <div class="cliente">${p.name}</div>
+    ${consultor ? `<div class="consultor-tag">👤 ${consultor}</div>` : ''}
   </div>
 </div>
 
-<div class="kpis">
-  <div class="kpi">
-    <div class="kpi-label">Saldo Inicial do Mês</div>
-    <div class="kpi-value">${fmtH(saldoInicial)}</div>
-  </div>
-  <div class="kpi">
-    <div class="kpi-label">Visitas Realizadas</div>
-    <div class="kpi-value">${visitasMes.length}</div>
-  </div>
-  <div class="kpi">
-    <div class="kpi-label">Horas Consumidas</div>
-    <div class="kpi-value neg">${fmtH(horasGastas)}</div>
-  </div>
-  <div class="kpi destaque">
-    <div class="kpi-label">Saldo Final</div>
-    <div class="kpi-value ${saldoFinal < 0 ? 'neg' : ''}">${fmtH(saldoFinal)}</div>
-  </div>
-</div>
+${kpisHTML}
 
-<h2>Registro de Visitas — ${mesNome}</h2>
+<h2>Registro de Visitas — ${mesNome}${consultor?' · '+consultor:''}</h2>
 <table>
   <thead>
     <tr>
@@ -592,7 +625,7 @@ function gerarRelatorioMensal(projectId) {
 
 <div class="footer">
   <span>Falcioni Consultoria — Documento gerado em ${new Date().toLocaleDateString('pt-BR')} às ${new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}</span>
-  <span>${p.name} — ${mesNome}</span>
+  <span>${p.name} — ${mesNome} — ${subtitulo}</span>
 </div>
 
 <div style="text-align:center;margin:32px 0 8px;display:flex;justify-content:center;gap:12px" class="no-print">
