@@ -408,14 +408,14 @@ function parseDuration(str) {
 }
 
 function calcSaldo(project) {
-  // Saldo = saldo anterior (initialHours) − visitas deste mês
+  // Disponível = cota mensal + saldo acumulado (initialHours) − visitas deste mês
   if (!project) return 0;
   const now = new Date();
   const mesStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
   const visitasEsteMes = state.visits
     .filter(v => v.projectId === project.id && v.date && v.date.startsWith(mesStr))
     .reduce((acc, v) => acc + parseDuration(v.duration), 0);
-  return project.initialHours - visitasEsteMes;
+  return project.monthlyQuotaHours + project.initialHours - visitasEsteMes;
 }
 
 function calcSaldoMensal(project, year, month) {
@@ -423,17 +423,14 @@ function calcSaldoMensal(project, year, month) {
   const now = new Date();
   const isCurrentMonth = year === now.getFullYear() && month === now.getMonth();
 
-  // Visitas do mês selecionado
   const visitasMes = state.visits
     .filter(v => v.projectId === project.id && v.date && v.date.startsWith(mesStr))
     .sort((a, b) => a.date.localeCompare(b.date));
 
   const horasGastas = visitasMes.reduce((acc, v) => acc + parseDuration(v.duration), 0);
-
-  // Saldo inicial = horas iniciais configuradas (saldo trazido do período anterior)
-  const saldoInicial = project.initialHours;
-  // Saldo final = inicial + cota do mês - horas gastas
-  const saldoFinal = saldoInicial + project.monthlyQuotaHours - horasGastas;
+  // Disponível = cota + saldo acumulado do mês anterior
+  const saldoInicial = project.monthlyQuotaHours + project.initialHours;
+  const saldoFinal = saldoInicial - horasGastas;
 
   return { saldoInicial, visitasMes, horasGastas, saldoFinal, isCurrentMonth };
 }
@@ -1137,7 +1134,7 @@ function renderDashboard() {
             <div class="client-card-body" onclick="openProject('${p.id}')">
               <div class="client-card-name">${p.name}</div>
               <div class="client-card-row"><span class="client-card-label">COTA MENSAL</span><span class="client-card-val">${p.monthlyQuotaHours} horas</span></div>
-              <div class="client-card-row"><span class="client-card-label">SALDO ANTERIOR</span><span class="client-card-val ${p.initialHours < 0 ? 'saldo-neg' : ''}">${fmt(p.initialHours)} h</span></div>
+              <div class="client-card-row"><span class="client-card-label">DISPONÍVEL NO MÊS</span><span class="client-card-val ${(p.monthlyQuotaHours+p.initialHours) < 0 ? 'saldo-neg' : ''}">${fmt(p.monthlyQuotaHours + p.initialHours)} h</span></div>
               <div class="client-card-row"><span class="client-card-label">SALDO ATUAL</span><span class="client-card-val ${saldo < 0 ? 'saldo-neg' : ''}">${fmt(saldo)} h</span></div>
               <div class="client-card-row"><span class="client-card-label">STATUS</span><span>${statusText(p.status)}</span></div>
             </div>
@@ -1226,10 +1223,11 @@ function renderDetail(id) {
         <div class="detail-client-name">${p.name}</div>
         <span class="detail-status-badge">${p.status}</span>
       </div>
-      <div class="detail-topbar-right" style="display:flex;align-items:center;gap:16px">
-        <button onclick="abrirModalRelatorio('${id}')" style="background:var(--blue);color:#fff;border:none;border-radius:8px;padding:8px 14px;font-size:.8rem;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px">📄 Relatório do Mês</button>
+      <div class="detail-topbar-right" style="display:flex;align-items:center;gap:10px">
+        <button onclick="abrirModalRelatorio('${id}')" style="background:var(--blue);color:#fff;border:none;border-radius:8px;padding:8px 14px;font-size:.8rem;font-weight:700;cursor:pointer">📄 Relatório</button>
+        <button onclick="confirmarVirarMes('${id}')" style="background:var(--gold);color:#fff;border:none;border-radius:8px;padding:8px 14px;font-size:.8rem;font-weight:700;cursor:pointer">🔄 Virar Mês</button>
         <div>
-          <div class="detail-credit-label">Crédito Total &nbsp;&nbsp;&nbsp; Total</div>
+          <div class="detail-credit-label">Disponível &nbsp;&nbsp;&nbsp; Saldo Atual</div>
           <div class="detail-credit-value ${saldo<0?'saldo-neg':''}">${fmt(saldo)} h</div>
         </div>
       </div>
@@ -2268,6 +2266,40 @@ async function saveEditProject(id) {
     else if (currentPage === 'detail') renderDetail(id);
     renderSidebarClients();
   } catch (e) { alert('Erro: ' + e.message); }
+}
+
+function confirmarVirarMes(projectId) {
+  const p = state.projects.find(x => x.id === projectId);
+  if (!p) return;
+  const saldoAtual = calcSaldo(p);
+  const novoInicial = saldoAtual - p.monthlyQuotaHours;
+  const meses = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+  const now = new Date();
+  const proxMes = meses[(now.getMonth() + 1) % 12];
+  const sinalSaldo = novoInicial >= 0 ? `+${fmt(novoInicial)}` : fmt(novoInicial);
+  openModal(`
+    <div class="modal-title">🔄 Virar Mês</div>
+    <div style="margin-bottom:16px;font-size:.9rem;color:var(--text2)">
+      <p>O saldo atual de <strong>${fmt(saldoAtual)} h</strong> será registrado como crédito/débito para <strong>${proxMes}</strong>.</p>
+      <br>
+      <p>Disponível em ${proxMes}: <strong style="color:${p.monthlyQuotaHours + novoInicial < 0 ? 'var(--red)' : 'var(--green)'}">${fmt(p.monthlyQuotaHours + novoInicial)} h</strong></p>
+      <p style="font-size:.78rem;color:var(--text2);margin-top:4px">(cota ${fmt(p.monthlyQuotaHours)}h ${novoInicial >= 0 ? '+' : ''} saldo ${sinalSaldo}h)</p>
+    </div>
+    <div class="form-actions">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="virarMes('${projectId}', ${novoInicial})">Confirmar</button>
+    </div>
+  `);
+}
+
+async function virarMes(projectId, novoInicial) {
+  try {
+    const raw = await api.updateProject(projectId, { initial_hours: novoInicial });
+    const idx = state.projects.findIndex(p => p.id === projectId);
+    if (idx >= 0) state.projects[idx] = mapProject(raw);
+    closeModal();
+    renderDetail(projectId);
+  } catch(e) { alert('Erro ao virar mês: ' + e.message); }
 }
 
 async function deleteProject(id) {
