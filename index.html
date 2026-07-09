@@ -408,48 +408,34 @@ function parseDuration(str) {
 }
 
 function calcSaldo(project) {
+  // Saldo = horas iniciais (saldo trazido do mês anterior) + cota mensal - visitas deste mês
   if (!project) return 0;
   const now = new Date();
-  const created = new Date(project.createdAt);
-  const createdYear = created.getUTCFullYear();
-  const createdMonth = created.getUTCMonth();
-  const nowYear = now.getFullYear();
-  const nowMonth = now.getMonth();
-  const monthsElapsed = Math.max(0, (nowYear - createdYear) * 12 + (nowMonth - createdMonth)) + 1;
-  const total = project.initialHours + monthsElapsed * project.monthlyQuotaHours;
-  const used = state.visits
-    .filter(v => v.projectId === project.id)
+  const mesStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+  const visitasEsteMes = state.visits
+    .filter(v => v.projectId === project.id && v.date && v.date.startsWith(mesStr))
     .reduce((acc, v) => acc + parseDuration(v.duration), 0);
-  return total - used;
+  return project.initialHours + project.monthlyQuotaHours - visitasEsteMes;
 }
 
 function calcSaldoMensal(project, year, month) {
-  // Saldo no início do mês = horas acumuladas até o mês anterior - visitas antes do mês
-  const created = new Date(project.createdAt);
-  const createdYear = created.getUTCFullYear();
-  const createdMonth = created.getUTCMonth();
-
-  // Meses até o início do mês (exclusive)
-  const monthsBefore = Math.max(0, (year - createdYear) * 12 + (month - createdMonth));
-  const totalBefore = project.initialHours + monthsBefore * project.monthlyQuotaHours;
-
-  const firstOfMonth = `${year}-${String(month + 1).padStart(2,'0')}-01`;
-  const visitasAntes = state.visits
-    .filter(v => v.projectId === project.id && v.date < firstOfMonth)
-    .reduce((acc, v) => acc + parseDuration(v.duration), 0);
-
-  const saldoInicial = totalBefore - visitasAntes;
-
-  // Visitas do mês
   const mesStr = `${year}-${String(month + 1).padStart(2,'0')}`;
+  const now = new Date();
+  const isCurrentMonth = year === now.getFullYear() && month === now.getMonth();
+
+  // Visitas do mês selecionado
   const visitasMes = state.visits
     .filter(v => v.projectId === project.id && v.date && v.date.startsWith(mesStr))
     .sort((a, b) => a.date.localeCompare(b.date));
 
   const horasGastas = visitasMes.reduce((acc, v) => acc + parseDuration(v.duration), 0);
-  const saldoFinal = saldoInicial - horasGastas;
 
-  return { saldoInicial, visitasMes, horasGastas, saldoFinal };
+  // Saldo inicial = horas iniciais configuradas (saldo trazido do período anterior)
+  const saldoInicial = project.initialHours;
+  // Saldo final = inicial + cota do mês - horas gastas
+  const saldoFinal = saldoInicial + project.monthlyQuotaHours - horasGastas;
+
+  return { saldoInicial, visitasMes, horasGastas, saldoFinal, isCurrentMonth };
 }
 
 function abrirModalRelatorio(projectId) {
@@ -1139,8 +1125,7 @@ function renderDashboard() {
     <div class="client-grid">
       ${activeProjects.map(p => {
         const saldo = calcSaldo(p);
-        const _now = new Date();
-        const { saldoInicial: horasIniciais } = calcSaldoMensal(p, _now.getFullYear(), _now.getMonth());
+        const horasIniciais = p.initialHours;
         return `
           <div class="client-card">
             <div class="client-card-banner">
@@ -1195,8 +1180,7 @@ function renderClientes() {
         <tbody>
           ${list.length ? list.map(p => {
             const saldo = calcSaldo(p);
-            const _n = new Date();
-            const { saldoInicial: horasIniciais } = calcSaldoMensal(p, _n.getFullYear(), _n.getMonth());
+            const horasIniciais = p.initialHours;
             const stMap = {'ATIVO':'badge-green','INATIVO':'badge-red','PAUSADO':'badge-orange'};
             return `<tr>
               <td>
