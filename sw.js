@@ -1,8 +1,8 @@
-const CACHE = 'falcion-v1';
-const STATIC = ['/', '/index.html', '/icon-192.png', '/icon-512.png', '/manifest.json'];
+const CACHE = 'falcion-v3';
+const ASSETS = ['./index.html', './manifest.json'];
 
 self.addEventListener('install', e => {
-  e.waitUntil(caches.open(CACHE).then(c => c.addAll(STATIC)));
+  e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)));
   self.skipWaiting();
 });
 
@@ -13,17 +13,13 @@ self.addEventListener('activate', e => {
   self.clients.claim();
 });
 
-// Network-first: sempre tenta buscar versão nova, fallback para cache
 self.addEventListener('fetch', e => {
   if (e.request.method !== 'GET') return;
-  if (e.request.url.includes('supabase') || e.request.url.includes('googleapis')) return;
   e.respondWith(
-    fetch(e.request)
-      .then(res => {
-        const clone = res.clone();
-        caches.open(CACHE).then(c => c.put(e.request, clone));
-        return res;
-      })
-      .catch(() => caches.match(e.request))
+    fetch(e.request).then(r => {
+      const clone = r.clone();
+      caches.open(CACHE).then(c => c.put(e.request, clone));
+      return r;
+    }).catch(() => caches.match(e.request))
   );
 });
