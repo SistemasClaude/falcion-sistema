@@ -981,10 +981,11 @@ tr:hover td{background:#F8FAFC}
 <div class="modal-overlay" id="modal-subtask">
   <div class="modal-box" style="max-width:400px">
     <div class="modal-header">
-      <div class="modal-title">➕ Nova Subtarefa</div>
+      <div class="modal-title" id="modal-subtask-title">➕ Nova Subtarefa</div>
       <button class="modal-close" onclick="closeModal('modal-subtask')">✕</button>
     </div>
     <input type="hidden" id="st-task-id">
+    <input type="hidden" id="st-sub-id">
     <div class="form-group">
       <label>Título *</label>
       <input type="text" id="st-title" placeholder="Descreva a subtarefa">
@@ -2864,28 +2865,50 @@ window.openSubtaskModal = function(taskId) {
   document.getElementById('st-task-id').value = taskId;
   document.getElementById('st-title').value = '';
   document.getElementById('st-due').value = '';
+  document.getElementById('st-sub-id').value = '';
+  document.getElementById('modal-subtask-title').textContent = '➕ Nova Subtarefa';
   const sel = document.getElementById('st-assigned');
   sel.innerHTML = '<option value="">— ninguém —</option>' +
     consultoresCache.map(c=>`<option value="${c}">${c}</option>`).join('');
   openModal('modal-subtask');
 };
 
+window.editSubtask = function(taskId, subId) {
+  const t = allTasks.find(x=>x.id===taskId);
+  if (!t) return;
+  const s = (t.subtasks||[]).find(x=>x.id===subId);
+  if (!s) return;
+  document.getElementById('st-task-id').value = taskId;
+  document.getElementById('st-sub-id').value = subId;
+  document.getElementById('st-title').value = s.title||'';
+  document.getElementById('st-due').value = s.due||'';
+  document.getElementById('modal-subtask-title').textContent = '✏️ Editar Subtarefa';
+  const sel = document.getElementById('st-assigned');
+  sel.innerHTML = '<option value="">— ninguém —</option>' +
+    consultoresCache.map(c=>`<option value="${c}"${c===s.assigned_to?' selected':''}>${c}</option>`).join('');
+  openModal('modal-subtask');
+};
+
 window.saveSubtask = async function() {
+  const subId = document.getElementById('st-sub-id').value;
   const taskId = document.getElementById('st-task-id').value;
   const title = document.getElementById('st-title').value.trim();
   const due = document.getElementById('st-due').value;
   const assigned = document.getElementById('st-assigned').value;
   if (!title) { toast('Digite o título da subtarefa', 'error'); return; }
-  const subId = Date.now().toString(36) + Math.random().toString(36).slice(2);
-  const sub = { id: subId, title, due, assigned_to: assigned, done: false };
   const doc = await db.collection('tasks').doc(taskId).get();
-  const current = doc.data().subtasks || [];
-  current.push(sub);
+  let current = doc.data().subtasks || [];
+  if (subId) {
+    current = current.map(s => s.id===subId ? {...s, title, due, assigned_to: assigned} : s);
+  } else {
+    const newId = Date.now().toString(36) + Math.random().toString(36).slice(2);
+    current.push({ id: newId, title, due, assigned_to: assigned, done: false });
+  }
   await db.collection('tasks').doc(taskId).update({ subtasks: current });
   const t = allTasks.find(x=>x.id===taskId);
   if (t) t.subtasks = current;
   closeModal('modal-subtask');
-  toast('Subtarefa adicionada!');
+  toast(subId ? 'Subtarefa atualizada!' : 'Subtarefa adicionada!');
   if (currentClientId) loadClientTasks(currentClientId);
   else renderTasks(allTasks);
 };
@@ -2955,6 +2978,7 @@ function renderTaskList(list, containerId) {
           <span style="flex:1;font-size:0.82rem${s.done?';text-decoration:line-through;color:var(--gray)':''}">${s.title}</span>
           ${s.due?`<span style="font-size:0.72rem;color:var(--gray)">📅 ${fmtDateStr(s.due)}</span>`:''}
           ${s.assigned_to?`<span style="font-size:0.72rem;background:#e8f0fe;color:var(--navy);border-radius:10px;padding:0.1rem 0.4rem">👤 ${s.assigned_to}</span>`:''}
+          <button onclick="editSubtask('${t.id}','${s.id}')" style="background:none;border:none;color:#7C3AED;cursor:pointer;font-size:0.75rem;padding:0 0.2rem" title="Editar">✏️</button>
           <button onclick="deleteSubtask('${t.id}','${s.id}')" style="background:none;border:none;color:#bbb;cursor:pointer;font-size:0.75rem;padding:0 0.2rem" title="Remover">✕</button>
         </div>`).join('')}
       </div>` : '';
